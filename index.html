@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>貸金一問一答</title>
+<style>
+:root{
+  --paper:#F4F6F3; --card:#FDFDFB; --ink:#232E38; --muted:#64717F;
+  --line:#DCE1DE; --accent:#31618F; --accent-soft:#E3EBF2;
+  --maru:#C25049; --batsu:#31618F;
+  --ok:#2E7B50; --ok-bg:#E4F1E8; --ng:#B8423A; --ng-bg:#F7E7E5;
+  --flag:#A87E2A; --flag-bg:#F4ECDA;
+  --serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Meiryo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12181F; --card:#1B232D; --ink:#E7EBEE; --muted:#93A1AE;
+    --line:#2C3743; --accent:#7FAED9; --accent-soft:#233242;
+    --maru:#E08A82; --batsu:#7FAED9;
+    --ok:#65C08D; --ok-bg:#20342A; --ng:#E28B83; --ng-bg:#3A2523;
+    --flag:#D2A952; --flag-bg:#37301F;
+  }
+}
+:root[data-theme="light"]{
+  --paper:#F4F6F3; --card:#FDFDFB; --ink:#232E38; --muted:#64717F;
+  --line:#DCE1DE; --accent:#31618F; --accent-soft:#E3EBF2;
+  --maru:#C25049; --batsu:#31618F;
+  --ok:#2E7B50; --ok-bg:#E4F1E8; --ng:#B8423A; --ng-bg:#F7E7E5;
+  --flag:#A87E2A; --flag-bg:#F4ECDA;
+}
+:root[data-theme="dark"]{
+  --paper:#12181F; --card:#1B232D; --ink:#E7EBEE; --muted:#93A1AE;
+  --line:#2C3743; --accent:#7FAED9; --accent-soft:#233242;
+  --maru:#E08A82; --batsu:#7FAED9;
+  --ok:#65C08D; --ok-bg:#20342A; --ng:#E28B83; --ng-bg:#3A2523;
+  --flag:#D2A952; --flag-bg:#37301F;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.75;-webkit-font-smoothing:antialiased}
+#app{max-width:34rem;margin:0 auto;padding:1rem 1rem 3rem}
+button{font-family:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ---- ホーム ---- */
+.masthead{padding:1.2rem 0 .4rem;border-bottom:2px solid var(--ink)}
+.eyebrow{margin:0;font-size:.72rem;letter-spacing:.14em;color:var(--muted)}
+.masthead h1{margin:.15rem 0 .2rem;font-family:var(--serif);font-weight:600;font-size:1.7rem;letter-spacing:.04em;text-wrap:balance}
+.masthead .sub{margin:0 0 .6rem;font-size:.8rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:1rem 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:.5rem;padding:.55rem .6rem}
+.stat .n{display:block;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.stat .l{display:block;font-size:.68rem;color:var(--muted);letter-spacing:.08em}
+.section-label{margin:1.3rem 0 .5rem;font-size:.72rem;letter-spacing:.14em;color:var(--muted)}
+.modes{display:flex;flex-direction:column;gap:.55rem}
+.mode{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:.6rem;padding:.75rem .85rem;font-size:.9rem;transition:border-color .15s}
+.mode:active{border-color:var(--accent)}
+.mode[disabled]{opacity:.45;cursor:default}
+.mode-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.mode-name{font-weight:700}
+.mode-range{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.bar{display:block;height:4px;background:var(--accent-soft);border-radius:2px;margin:.5rem 0 .35rem;overflow:hidden}
+.bar > span{display:block;height:100%;background:var(--accent);border-radius:2px}
+.mode-foot{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.mode--special .mode-name{color:var(--accent)}
+.tools{display:flex;gap:.6rem;margin-top:1.4rem;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:.5rem;padding:.55rem .9rem;font-size:.82rem}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:var(--paper);font-weight:700}
+.btn--quiet{border:none;background:none;color:var(--muted);text-decoration:underline;padding:.55rem .3rem}
+
+/* ---- 出題 ---- */
+.topbar{display:flex;align-items:center;gap:.6rem;padding:.4rem 0 .55rem}
+.topbar .back{border:none;background:none;font-size:.82rem;color:var(--muted);padding:.3rem .3rem .3rem 0}
+.topbar .where{flex:1;font-size:.78rem;color:var(--muted);text-align:center}
+.topbar .count{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums}
+.track{height:3px;background:var(--accent-soft);border-radius:2px;overflow:hidden}
+.track > span{display:block;height:100%;background:var(--accent);transition:width .2s}
+.qcard{background:var(--card);border:1px solid var(--line);border-radius:.7rem;padding:1rem 1.1rem;margin-top:1rem;min-height:9.5rem}
+.qmeta{margin:0 0 .5rem;font-size:.72rem;letter-spacing:.1em;color:var(--muted);display:flex;justify-content:space-between;gap:.5rem}
+.qmeta .fchip{color:var(--flag);font-weight:700}
+.qtext{margin:0;font-size:1.02rem;font-weight:500}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:1rem}
+.abtn{font-size:2.1rem;font-weight:700;padding:.55rem 0 .7rem;border-radius:.7rem;background:var(--card);border:2px solid var(--line);line-height:1.3}
+.abtn small{display:block;font-size:.68rem;font-weight:400;color:var(--muted);letter-spacing:.1em}
+.abtn--o{color:var(--maru)}
+.abtn--x{color:var(--batsu)}
+.abtn--o:active{border-color:var(--maru)}
+.abtn--x:active{border-color:var(--batsu)}
+.abtn[disabled]{opacity:.35;cursor:default}
+.feedback{margin-top:1rem}
+.verdict{border-radius:.6rem;padding:.6rem .9rem;font-weight:700;font-size:.95rem}
+.verdict--ok{background:var(--ok-bg);color:var(--ok)}
+.verdict--ng{background:var(--ng-bg);color:var(--ng)}
+.expl{background:var(--card);border:1px solid var(--line);border-radius:.6rem;padding:.2rem 1rem;margin-top:.6rem;font-size:.88rem}
+.expl p{margin:.7rem 0}
+.fbrow{display:flex;gap:.6rem;margin-top:.8rem}
+.flagbtn{flex:1;border:1px solid var(--line);background:var(--card);border-radius:.5rem;padding:.6rem;font-size:.8rem;color:var(--muted)}
+.flagbtn[aria-pressed="true"]{background:var(--flag-bg);border-color:var(--flag);color:var(--flag);font-weight:700}
+.nextbtn{flex:1.4;border:none;background:var(--accent);color:var(--paper);border-radius:.5rem;padding:.6rem;font-size:.9rem;font-weight:700}
+
+/* ---- 結果 ---- */
+.scorecard{background:var(--card);border:1px solid var(--line);border-radius:.7rem;padding:1.2rem;text-align:center;margin-top:1rem}
+.scorecard .big{font-size:2.4rem;font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--serif)}
+.scorecard .big small{font-size:1.1rem;color:var(--muted);font-family:var(--sans)}
+.scorecard .rate{color:var(--muted);font-size:.85rem;margin-top:.2rem}
+.wrongs{margin-top:1rem}
+.wrongs details{background:var(--card);border:1px solid var(--line);border-radius:.55rem;padding:.55rem .8rem;margin-bottom:.5rem;font-size:.85rem}
+.wrongs summary{cursor:pointer;font-weight:500}
+.wrongs summary .wid{color:var(--ng);font-weight:700;font-variant-numeric:tabular-nums;margin-right:.4em}
+.resultbtns{display:flex;gap:.6rem;margin-top:1.2rem}
+.resultbtns .btn{flex:1;text-align:center;padding:.7rem}
+
+/* ---- 書き出しモーダル ---- */
+dialog{border:1px solid var(--line);border-radius:.7rem;background:var(--card);color:var(--ink);max-width:32rem;width:calc(100vw - 2.5rem);padding:1.1rem}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 .5rem;font-size:1rem;font-family:var(--serif)}
+dialog ol{margin:.4rem 0;padding-left:1.3rem;font-size:.82rem;color:var(--muted)}
+dialog textarea{width:100%;height:7rem;font-size:.7rem;border:1px solid var(--line);border-radius:.4rem;background:var(--paper);color:var(--ink);padding:.5rem}
+.dlgbtns{display:flex;gap:.6rem;margin-top:.7rem;align-items:center;flex-wrap:wrap}
+.copied{color:var(--ok);font-size:.8rem;font-weight:700}
+dialog a{color:var(--accent)}
+dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid var(--line);border-radius:.4rem;background:var(--paper);color:var(--ink);font-size:.85rem;font-family:inherit}
+.dlgnote{font-size:.74rem;color:var(--muted);margin:.4rem 0 0}
+.syncbox{margin-top:1rem;padding:.7rem .9rem;border-radius:.6rem;background:var(--card);border:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+.syncbox--ok{background:var(--ok-bg);color:var(--ok);border-color:transparent;font-weight:700}
+.syncbox--ng{background:var(--ng-bg);color:var(--ng);border-color:transparent}
+.report{font-size:.86rem;max-height:58vh;overflow-y:auto;padding-right:.2rem}
+.report h2{font-size:1rem;font-family:var(--serif);margin:1rem 0 .4rem}
+.report h3{font-size:.92rem;margin:.9rem 0 .3rem}
+.report h4{font-size:.86rem;margin:.8rem 0 .3rem}
+.report ul{margin:.3rem 0;padding-left:1.25rem}
+.report li{margin:.25rem 0}
+.report p{margin:.5rem 0}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <section id="view-home">
+    <header class="masthead">
+      <p class="eyebrow">貸金業務取扱主任者 試験対策</p>
+      <h1>一問一答 103問</h1>
+      <p class="sub">直近5回の出題論点をオリジナル◯×に再構成した練習帳</p>
+    </header>
+    <div class="stats" id="stats"></div>
+    <p class="section-label">分野を選んで開始</p>
+    <div class="modes" id="cat-modes"></div>
+    <p class="section-label">まとめて演習</p>
+    <div class="modes" id="special-modes"></div>
+    <p class="section-label">GitHub連携（保存とAI分析の自動化）</p>
+    <div class="modes">
+      <button class="mode mode--special" id="reportBtn">
+        <span class="mode-head"><span class="mode-name">AI分析レポートを見る</span><span class="mode-range">progress/ai_report.md</span></span>
+      </button>
+      <button class="mode" id="ghSetupBtn">
+        <span class="mode-head"><span class="mode-name">連携設定</span><span class="mode-range" id="ghStatus">未設定</span></span>
+        <span class="mode-foot">トークンを設定すると、演習終了時に自動保存→AI苦手分析まで自動で走ります</span>
+      </button>
+    </div>
+    <div class="tools">
+      <button class="btn btn--primary" id="exportBtn">記録をCSVで書き出す</button>
+      <button class="btn btn--quiet" id="resetBtn">記録をリセット</button>
+    </div>
+  </section>
+
+  <section id="view-quiz" hidden>
+    <div class="topbar">
+      <button class="back" id="quitBtn">← 中断</button>
+      <span class="where" id="whereLabel"></span>
+      <span class="count" id="countLabel"></span>
+    </div>
+    <div class="track"><span id="trackFill" style="width:0%"></span></div>
+    <article class="qcard">
+      <p class="qmeta"><span id="qMeta"></span><span class="fchip" id="qFlagChip" hidden>🔖 復習</span></p>
+      <p class="qtext" id="qText"></p>
+    </article>
+    <div class="answers">
+      <button class="abtn abtn--o" id="ansO">◯<small>正しい</small></button>
+      <button class="abtn abtn--x" id="ansX">✕<small>誤り</small></button>
+    </div>
+    <div class="feedback" id="feedback" hidden>
+      <div class="verdict" id="verdict"></div>
+      <div class="expl" id="expl"></div>
+      <div class="fbrow">
+        <button class="flagbtn" id="flagBtn" aria-pressed="false">🔖 復習フラグ</button>
+        <button class="nextbtn" id="nextBtn">次へ →</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-result" hidden>
+    <div class="topbar"><button class="back" id="homeBtn">← ホーム</button></div>
+    <div class="scorecard">
+      <div class="big" id="scoreBig"></div>
+      <div class="rate" id="scoreRate"></div>
+    </div>
+    <div class="syncbox" id="syncBox" hidden></div>
+    <div class="wrongs" id="wrongList"></div>
+    <div class="resultbtns">
+      <button class="btn" id="retryBtn">同じ範囲をもう一度</button>
+      <button class="btn btn--primary" id="homeBtn2">ホームへ</button>
+    </div>
+  </section>
+</div>
+
+<dialog id="exportDlg">
+  <h2>記録をCSVで書き出す</h2>
+  <ol>
+    <li>下の「コピー」を押す</li>
+    <li>GitHub で <a href="https://github.com/mae39kuma-gif/kashikinn/edit/main/progress/results.csv" target="_blank" rel="noopener">progress/results.csv を開く</a></li>
+    <li>中身をすべて選択して貼り付け、Commit changes で保存</li>
+  </ol>
+  <p style="font-size:.78rem;color:var(--muted);margin:.3rem 0 .5rem">保存すると GitHub Actions がAI苦手分析を自動実行します。</p>
+  <textarea id="csvArea" readonly></textarea>
+  <div class="dlgbtns">
+    <button class="btn btn--primary" id="directSaveBtn">GitHubに直接保存</button>
+    <button class="btn" id="copyBtn">コピー</button>
+    <button class="btn" id="closeDlg">閉じる</button>
+    <span class="copied" id="copiedMsg" hidden>コピーしました ✓</span>
+  </div>
+  <p class="dlgnote" id="dlgSync"></p>
+</dialog>
+
+<dialog id="tokenDlg">
+  <h2>GitHub連携の設定</h2>
+  <p style="font-size:.82rem;margin:.2rem 0 .5rem">トークンを設定すると、演習終了時にアプリが自動で <code>results.csv</code> を保存し、AI苦手分析まで自動実行されます。</p>
+  <ol>
+    <li>GitHub → Settings → <strong>Developer settings</strong> → Personal access tokens → <strong>Fine-grained tokens</strong> → Generate new token</li>
+    <li>Repository access: <strong>Only select repositories → kashikinn</strong></li>
+    <li>Permissions → Repository permissions → <strong>Contents: Read and write</strong></li>
+    <li>生成されたトークン（github_pat_…）を下に貼り付けて保存</li>
+  </ol>
+  <input id="tokenInput" type="password" placeholder="github_pat_..." autocomplete="off">
+  <p class="dlgnote">トークンはこの端末のブラウザ内にのみ保存されます（リポジトリには送信されません）。</p>
+  <div class="dlgbtns">
+    <button class="btn btn--primary" id="tokenSaveBtn">保存</button>
+    <button class="btn" id="tokenClearBtn">連携を解除</button>
+    <button class="btn" id="tokenCloseBtn">閉じる</button>
+    <span class="copied" id="tokenMsg" hidden></span>
+  </div>
+</dialog>
+
+<dialog id="reportDlg">
+  <h2>AI苦手分析レポート</h2>
+  <div class="report" id="reportBody"></div>
+  <div class="dlgbtns">
+    <button class="btn btn--primary" id="reportReloadBtn">再読み込み</button>
+    <button class="btn" id="reportCloseBtn">閉じる</button>
+  </div>
+</dialog>
+
+<script>
+const DATA = {"cats": {"01": {"name": "貸金業法", "field": "法及び関係法令", "range": "問1〜27", "count": 43}, "02": {"name": "貸付け関連法令", "field": "貸付け・付随取引(民法等)", "range": "問28〜42", "count": 30}, "03": {"name": "資金需要者等の保護", "field": "資金需要者等の保護", "range": "問43〜47", "count": 15}, "04": {"name": "財務及び会計", "field": "財務及び会計", "range": "問48〜50", "count": 15}}, "questions": [{"id": "01-Q1", "cat": "01", "q": "貸金業には、物品の運送を業とする者がその取引に付随して行う金銭の貸付けも含まれる。", "a": "X", "e": "<p>物品の運送業者が取引に付随して行う金銭の貸付け等は、貸金業の定義から <strong>除外<\/strong> される（法2条1項。事業者間の付随的な貸付け等の適用除外）。<\/p>"}, {"id": "01-Q2", "cat": "01", "q": "貸金業法上の「債務者等」には、債務者又は債務者であった者のほか、保証人及び保証人であった者も含まれる。", "a": "O", "e": "<p>「債務者等」とは、債務者又は債務者であった者、及び <strong>保証人又は保証人であった者<\/strong> をいう（法2条6項）。<\/p>"}, {"id": "01-Q3", "cat": "01", "q": "「貸付けの契約」には、金銭の貸付けに係る契約や金銭の貸借の媒介の契約のほか、これらの契約に係る保証契約も含まれる。", "a": "O", "e": "<p>「貸付けの契約」には、貸付けに係る契約・媒介に係る契約に加え、<strong>これらに係る保証契約<\/strong> も含まれる（法2条3項）。<\/p>"}, {"id": "01-Q4", "cat": "01", "q": "住宅資金貸付契約には、住宅の建設・購入に必要な資金の貸付けに係る契約は含まれるが、住宅の改良に必要な資金の貸付けに係る契約は含まれない。", "a": "X", "e": "<p>住宅資金貸付契約には、住宅の建設・購入のほか、<strong>住宅の改良<\/strong> に必要な資金の貸付けに係る契約も含まれる（施行規則1条の2の3等）。<\/p>"}, {"id": "01-Q5", "cat": "01", "q": "2以上の都道府県の区域内に営業所等を設置して貸金業を営もうとする者は、内閣総理大臣（財務局長）の登録を受けなければならない。", "a": "O", "e": "<p>2以上の都道府県に営業所等を設置する場合は <strong>内閣総理大臣（財務局長）<\/strong>、1つの都道府県内のみの場合はその <strong>都道府県知事<\/strong> の登録を受ける（法3条1項）。<\/p>"}, {"id": "01-Q6", "cat": "01", "q": "貸金業の登録は3年ごとにその更新を受けなければ、期間の経過によって効力を失う。", "a": "O", "e": "<p>登録の有効期間は <strong>3年<\/strong> であり、更新を受けなければ効力を失う（法3条2項）。<\/p>"}, {"id": "01-Q7", "cat": "01", "q": "都道府県知事の登録を受けている者が他の都道府県にも営業所を設置する場合、登録換えの申請をした時から、直ちに当該営業所で貸金業を営むことができる。", "a": "X", "e": "<p>登録換えが必要な場合、新たな登録（登録換え後の登録）を受けるまでは当該営業所で営業できない。「申請をした時から営める」わけではない（法7条）。<\/p>"}, {"id": "01-Q8", "cat": "01", "q": "貸金業者は、他に行っている事業の種類を変更した場合、その日から2週間以内に、登録行政庁に届け出なければならない。", "a": "O", "e": "<p>登録事項（他に営む事業の種類、営業所の名称・所在地、業務の方法等）に変更があったときは、原則として <strong>2週間以内<\/strong> に届け出る（法8条1項）。<\/p>"}, {"id": "01-Q9", "cat": "01", "q": "貸金業者は、営業所等ごとに、貸金業の業務に従事する者の数に対して50分の1以上の割合で、成年者である専任の貸金業務取扱主任者を置かなければならない。", "a": "O", "e": "<p>営業所等ごとに従事者数の <strong>50分の1以上<\/strong> の割合で、成年者である専任の主任者を置く（法12条の3、施行規則10条の8）。<\/p>"}, {"id": "01-Q10", "cat": "01", "q": "貸金業者は、予見し難い事由により営業所等の主任者の数が法定数を下回ったときは、30日以内に必要な措置をとらなければならない。", "a": "X", "e": "<p>主任者が法定数を下回ったときは <strong>2週間以内<\/strong> に必要な措置をとらなければならない（法12条の3第3項）。「30日以内」は誤り。<\/p>"}, {"id": "01-Q11", "cat": "01", "q": "貸金業者が貸付けに係る契約（極度方式基本契約を除く）を締結した場合の契約締結時の書面には、その営業所等に置かれる貸金業務取扱主任者の氏名及び登録番号を記載しなければならない。", "a": "X", "e": "<p>契約締結時の書面（17条書面）の記載事項に「主任者の氏名・登録番号」は <strong>含まれていない<\/strong>。主任者の氏名等の記載が求められるのは別の場面であり、本記述は誤り。<\/p>"}, {"id": "01-Q12", "cat": "01", "q": "登録行政庁が貸金業者に業務改善命令を出せるのは、その業務の運営が法令に違反すると認められる場合に限られる。", "a": "X", "e": "<p>業務改善命令は、法令違反の場合に限らず、<strong>業務の運営に関し資金需要者等の利益保護に欠けるおそれがある<\/strong> と認められる場合等にも発出できる（法24条の6の3）。<\/p>"}, {"id": "01-Q13", "cat": "01", "q": "登録行政庁は、登録を受けた貸金業者が暴力団員等をその業務に従事させ、又は業務の補助者として使用したときは、その登録を取り消さなければならない。", "a": "O", "e": "<p>暴力団員等を業務に従事・補助に使用した場合は、<strong>必要的取消し<\/strong> の対象となる（法24条の6の4等）。<\/p>"}, {"id": "01-Q14", "cat": "01", "q": "貸金業者は、事業年度ごとに事業報告書を作成し、毎事業年度経過後3か月以内に登録行政庁に提出しなければならない。", "a": "O", "e": "<p>事業報告書は毎事業年度経過後 <strong>3か月以内<\/strong> に提出する（法24条の6の9）。<\/p>"}, {"id": "01-Q15", "cat": "01", "q": "貸金業者は、個人顧客との間で金銭の貸借の媒介の契約を締結しようとする場合には、返済能力の調査を行うことを要しない。", "a": "X", "e": "<p>貸付けの契約（貸付けに係る契約・<strong>媒介に係る契約<\/strong>を含む）を締結しようとする場合は、返済能力の調査を行わなければならない（法13条1項）。媒介でも調査は必要。<\/p>"}, {"id": "01-Q16", "cat": "01", "q": "貸金業者は、個人顧客との間で貸付けの契約（除外契約等を除く）を締結しようとする場合、返済能力の調査にあたり指定信用情報機関が保有する信用情報を使用しなければならない。", "a": "O", "e": "<p>個人顧客との貸付契約では、原則として <strong>指定信用情報機関の信用情報の使用<\/strong> が義務づけられる（法13条2項）。<\/p>"}, {"id": "01-Q17", "cat": "01", "q": "個人顧客との貸付けで、その貸付額が50万円を超えるとき、又は他社借入残高と合算して100万円を超えるときは、原則として年収を明らかにする書面（源泉徴収票等）の提出を受けなければならない。", "a": "O", "e": "<p><strong>1社50万円超<\/strong> 又は <strong>合算100万円超<\/strong> のときは、原則として資力を明らかにする書面の提出・提供を受ける（法13条3項）。<\/p>"}, {"id": "01-Q18", "cat": "01", "q": "年収を明らかにする書面として給与の支払明細書の提出を受ける場合、原則として直近1か月分のものの提出を受ければ足りる。", "a": "X", "e": "<p>給与明細書による場合は、原則として <strong>直近2か月分以上<\/strong> （賞与等を考慮できる場合は1年分等）の提出が必要（施行規則10条の17）。「直近1か月分で足りる」は誤り。<\/p>"}, {"id": "01-Q19", "cat": "01", "q": "総量規制（過剰貸付け等の禁止）により、個人顧客の借入総額が原則として年収等の3分の1を超える貸付けは禁止される。", "a": "O", "e": "<p>個人顧客合算額が年収等の <strong>3分の1<\/strong> を超える「個人過剰貸付契約」は原則禁止（法13条の2第2項）。<\/p>"}, {"id": "01-Q20", "cat": "01", "q": "住宅資金貸付契約や、自動車の購入に際しその自動車を担保とする貸付けに係る契約は、総量規制の「除外貸付け」に該当する。", "a": "O", "e": "<p>住宅資金貸付契約、自動車担保貸付け、高額療養費の貸付け、不動産売却代金で弁済される貸付け等は <strong>除外契約<\/strong> にあたり、残高合算の対象外（施行規則10条の21）。<\/p>"}, {"id": "01-Q21", "cat": "01", "q": "個人事業者に対する貸付けで、事業の実態が確認され、返済能力を超えないと認められる契約は、総量規制の「例外契約」に該当し得る。", "a": "O", "e": "<p>事業実態が確認された個人事業者向け貸付け等は <strong>例外契約<\/strong> に該当し得る。除外契約と異なり、<strong>例外契約の残高は個人顧客合算額に算入される<\/strong>点に注意（施行規則10条の23）。<\/p>"}, {"id": "01-Q22", "cat": "01", "q": "極度方式基本契約については、3か月以内の一定期間ごとに、指定信用情報機関の信用情報を使用して基準額超過極度方式基本契約に該当するか調査しなければならないが、期間末日の貸付残高の合計が10万円以下であれば調査は不要である。", "a": "O", "e": "<p>定期的な調査（法13条の3）は、期間末日の極度方式貸付けの <strong>残高合計が10万円以下<\/strong> の場合等は不要とされる。基準額超過に該当すると認められるときは、<strong>極度額の減額<\/strong> 又は <strong>新たな貸付けの停止<\/strong> の措置を要する。<\/p>"}, {"id": "01-Q23", "cat": "01", "q": "貸金業者は、営業所等ごとに、公衆の見やすい場所に貸付条件等を掲示しなければならず、掲示事項には金銭の貸付けにあっては主な返済の例が含まれる。", "a": "O", "e": "<p>貸付条件等の掲示（法14条）には、貸付利率・返済方式・<strong>返済の例<\/strong> 等が含まれる。<\/p>"}, {"id": "01-Q24", "cat": "01", "q": "貸付条件の広告をするとき表示しなければならない事項には、貸付けの利率、返済の方式・期間・回数、賠償額の予定に関する定めをする場合のその割合等が含まれる。", "a": "O", "e": "<p>広告等の表示事項（法15条、施行規則）には、貸付利率、返済方式・期間・回数、賠償額の予定（割合）、担保が必要な場合の事項等が含まれる。<\/p>"}, {"id": "01-Q25", "cat": "01", "q": "貸金業者は、極度方式基本契約を締結しようとする場合、その契約を締結するまでに、契約締結前の書面を相手方となろうとする者に交付しなければならない。", "a": "O", "e": "<p>契約締結前の書面（法16条の2）は、貸付けに係る契約・極度方式基本契約・保証契約について、契約締結前に交付する（極度方式 <strong>貸付け<\/strong> に係る契約は交付対象から除かれる点に注意）。<\/p>"}, {"id": "01-Q26", "cat": "01", "q": "貸金業者は、貸付けの契約を締結したときは、遅滞なく、契約締結時の書面（17条書面）を相手方に交付しなければならない。", "a": "O", "e": "<p>契約締結時には、遅滞なく所定事項を記載した <strong>17条書面<\/strong> を交付する（法17条1項）。相手方の承諾があれば電磁的方法による提供も可能。<\/p>"}, {"id": "01-Q27", "cat": "01", "q": "契約締結時の書面を交付した後に貸付けの利率を引き下げた場合でも、貸金業者は変更後の内容を記載した契約締結時の書面を改めて交付しなければならない。", "a": "X", "e": "<p>契約締結後の変更が <strong>相手方の利益となる変更<\/strong>（利率の引下げ、返済額の減額、保証契約の解除等）の場合は、変更後の書面の再交付は <strong>不要<\/strong> とされている。<\/p>"}, {"id": "01-Q28", "cat": "01", "q": "貸金業者は、債権の全部又は一部について弁済を受けたときは、その都度、直ちに、弁済をした者に受取証書（18条書面）を交付しなければならない。", "a": "O", "e": "<p>全部・一部を問わず、弁済を受けたときは直ちに <strong>受取証書（18条書面）<\/strong> を交付する（法18条1項）。<\/p>"}, {"id": "01-Q29", "cat": "01", "q": "貸金業を営む者等は、正当な理由がないのに、午後9時から午前8時までの間に、債務者等に電話をかけ、又は居宅を訪問して取立てをしてはならない。", "a": "O", "e": "<p>原則 <strong>午後9時〜午前8時<\/strong> の取立て行為（電話・FAX・訪問等）は、正当な理由がない限り禁止（法21条1項1号、施行規則19条）。<\/p>"}, {"id": "01-Q30", "cat": "01", "q": "貸金業を営む者等は、貼り紙・立看板その他いかなる方法によっても、債務者の借入れに関する事実その他私生活に関する事実を、債務者等以外の者に明らかにしてはならない。", "a": "O", "e": "<p>債務者等の借入れの事実・私生活上の事実を第三者に明らかにする行為は禁止（法21条1項5号）。<\/p>"}, {"id": "01-Q31", "cat": "01", "q": "貸金業者は、貸付けに係る契約に基づく債権を他の貸金業者に譲渡する場合には、譲受人に対し、当該債権が貸付けの契約に基づくものであることや、取立て規制等の規定の適用がある旨を通知する必要はない。", "a": "X", "e": "<p>債権を譲渡するときは、譲受人に対し、当該債権が貸付契約に基づくこと等の所定事項及び <strong>取立て規制等の規定の適用がある旨を通知<\/strong> しなければならない（法24条）。<\/p>"}, {"id": "01-Q32", "cat": "01", "q": "貸金業者は、その従業者が営業所等で資金需要者等と対面しない業務に従事する場合であっても、従業者証明書を携帯させなければその業務に従事させてはならない。", "a": "O", "e": "<p>対面・非対面を問わず、<strong>従業者証明書<\/strong> を携帯させなければ業務に従事させてはならない（法12条の4第1項）。<\/p>"}, {"id": "01-Q33", "cat": "01", "q": "貸金業者は、その業務に関し、資金需要者等に対し、不確実な事項について断定的判断を提供し、又は確実であると誤認させるおそれのあることを告げてはならない。", "a": "O", "e": "<p>断定的判断の提供・確実と誤認させる告知は <strong>禁止行為<\/strong> にあたる（法12条の6第2号）。<\/p>"}, {"id": "01-Q34", "cat": "01", "q": "貸金業者は、貸付けの契約の相手方の死亡により保険金の支払を受ける保険契約を締結しようとする場合、自殺による死亡を保険事故とすることができる。", "a": "X", "e": "<p>いわゆる「自殺免責」の趣旨から、当該保険契約において <strong>自殺による死亡を保険事故としてはならない<\/strong>（法12条の7、施行規則）。<\/p>"}, {"id": "01-Q35", "cat": "01", "q": "個人である貸金業者が死亡した場合、その相続人は、死亡の事実を知った日から30日以内に、その旨を登録行政庁に届け出なければならない。", "a": "O", "e": "<p>死亡・合併消滅・破産・解散・廃業等の場合は、原則 <strong>30日以内<\/strong>（死亡は知った日から30日以内）に届け出る（法10条等の廃業等の届出）。<\/p>"}, {"id": "01-Q36", "cat": "01", "q": "貸金業者について破産手続開始の決定があったときは、貸金業の登録はその効力を失う。", "a": "O", "e": "<p>破産手続開始の決定があったときは、登録は <strong>効力を失う<\/strong>（失効事由）。<\/p>"}, {"id": "01-Q37", "cat": "01", "q": "貸金業を廃止した貸金業者は、廃止と同時にすべての地位を失い、既存の貸付契約に基づく取引を結了する目的の範囲内であっても貸金業者とはみなされない。", "a": "X", "e": "<p>廃業等の後も、<strong>既存の取引を結了する目的の範囲内<\/strong> ではなお貸金業者とみなされる（法10条2項等）。<\/p>"}, {"id": "01-Q38", "cat": "01", "q": "貸金業者（一定の除外事由がある者を除く）は、その登録期間中に純資産額が5000万円未満となったことを知った場合、その旨を登録行政庁に届け出なければならない。", "a": "O", "e": "<p>純資産額が <strong>5000万円未満<\/strong> となったこと等は、開始等の届出（法24条の6の2）の対象である。なお純資産5000万円以上は登録の財産的基礎要件でもある。<\/p>"}, {"id": "01-Q39", "cat": "01", "q": "出資法上、業として金銭の貸付けを行う者が年20%を超える利息の契約をし、又はこれを受領した場合は、刑事罰の対象となる。", "a": "O", "e": "<p>業として行う場合の出資法上の上限金利は <strong>年20%<\/strong> であり、超過すると刑事罰の対象（出資法5条2項）。<\/p>"}, {"id": "01-Q40", "cat": "01", "q": "利息制限法上、営業的金銭消費貸借における賠償額の予定（遅延損害金）は、その元本に対する割合が年2割（20%）を超えるときは、超過部分が無効となる。", "a": "O", "e": "<p>営業的金銭消費貸借の遅延損害金は <strong>年20%<\/strong> を上限とし、超過部分は無効（利息制限法7条）。<\/p>"}, {"id": "01-Q41", "cat": "01", "q": "利息制限法上、元本10万円以上100万円未満の場合の利息の上限は年18%である。", "a": "O", "e": "<p>上限は <strong>10万円未満：20%／10万円以上100万円未満：18%／100万円以上：15%<\/strong>（利息制限法1条）。<\/p>"}, {"id": "01-Q42", "cat": "01", "q": "複数の営業的金銭消費貸借契約を同一の貸金業者が同時に締結する場合、後の契約の利率の上限は、すでに貸し付けている元本残高と新たな元本を合算した額を基準に判断される。", "a": "O", "e": "<p>同一貸主・債務者間で複数契約があるときは、<strong>既存元本残高＋新規元本を合算<\/strong> した額に応じた利率区分で上限を判断する（利息制限法5条、みなし合算）。<\/p>"}, {"id": "01-Q43", "cat": "01", "q": "利息制限法上、債権者が受け取る礼金・手数料・調査料等は、契約締結・債務弁済の費用を除き、名目を問わず利息とみなされる（みなし利息）。", "a": "O", "e": "<p>契約締結・弁済の費用を除き、元本以外に受ける金銭は名目を問わず <strong>みなし利息<\/strong>（利息制限法3条・6条）。ただしATM利用料の一定額など、政令で利息とみなさないものもある。<\/p>"}, {"id": "02-Q1", "cat": "02", "q": "意思表示は、その通知が相手方に到達した時から効力を生じる（到達主義）。", "a": "O", "e": "<p>意思表示は、相手方に <strong>到達<\/strong> した時から効力を生じる（民法97条1項、到達主義）。「発した時」ではない。<\/p>"}, {"id": "02-Q2", "cat": "02", "q": "錯誤による意思表示は、その錯誤が法律行為の目的・取引上の社会通念に照らして重要なものであっても、表意者に重大な過失があったときは、原則として取り消すことができない。", "a": "O", "e": "<p>重要な錯誤でも、表意者に <strong>重過失<\/strong> があるときは原則として取消しできない（民法95条3項。相手方が悪意・重過失だった等の例外あり）。<\/p>"}, {"id": "02-Q3", "cat": "02", "q": "相手方に対する意思表示について第三者が強迫を行った場合、相手方がその事実を知らず、かつ知ることができなかったときでも、表意者はその意思表示を取り消すことができる。", "a": "O", "e": "<p>第三者による <strong>強迫<\/strong> の場合は、相手方の善意・無過失を問わず取り消せる（民法96条2項は「詐欺」に限る制限であり、強迫には及ばない）。<\/p>"}, {"id": "02-Q4", "cat": "02", "q": "代理人が本人のためにすることを示さないでした意思表示は、原則として代理人自身のためにしたものとみなされるが、相手方が本人のためにすることを知り、又は知ることができたときは、本人に対して効力を生じる。", "a": "O", "e": "<p>顕名がない代理行為は原則代理人に効果帰属するが、相手方が悪意・有過失なら <strong>本人に効果帰属<\/strong> する（民法100条）。<\/p>"}, {"id": "02-Q5", "cat": "02", "q": "何らの代理権もない者が本人の代理人として契約した場合（無権代理）、相手方は、契約時に代理権がないことを知らなかったときは、本人が追認しない間、契約を取り消すことができる。", "a": "O", "e": "<p>無権代理の相手方は、<strong>善意<\/strong> であれば本人の追認前に <strong>取消権<\/strong> を行使できる（民法115条）。<\/p>"}, {"id": "02-Q6", "cat": "02", "q": "法律行為の当事者が意思表示をした時に意思能力を有しなかったときは、その法律行為は取り消すことができる。", "a": "X", "e": "<p>意思無能力者の法律行為は <strong>無効<\/strong> である（民法3条の2）。「取り消すことができる」ではない。<\/p>"}, {"id": "02-Q7", "cat": "02", "q": "未成年者が、成年者であると信じさせるため詐術を用いて法律行為をした場合、その未成年者及び法定代理人は当該法律行為を取り消すことができる。", "a": "X", "e": "<p>制限行為能力者が <strong>詐術<\/strong> を用いたときは、その行為を <strong>取り消すことができない<\/strong>（民法21条）。<\/p>"}, {"id": "02-Q8", "cat": "02", "q": "債権は、債権者が権利を行使できることを知った時から5年間、又は権利を行使できる時から10年間行使しないときに、時効によって消滅する。", "a": "O", "e": "<p>主観的起算点から <strong>5年<\/strong>、客観的起算点から <strong>10年<\/strong> のいずれか早い方で時効消滅（民法166条1項）。<\/p>"}, {"id": "02-Q9", "cat": "02", "q": "保証人は、主たる債務の消滅時効が完成した場合であっても、主たる債務の消滅時効を援用することはできない。", "a": "X", "e": "<p>保証人は、主たる債務の消滅時効を <strong>援用できる<\/strong>（時効の援用権者。民法145条）。<\/p>"}, {"id": "02-Q10", "cat": "02", "q": "消滅時効が完成する前に、債務者があらかじめ「時効が完成しても援用しない」旨を合意したとしても、その合意は無効である。", "a": "O", "e": "<p>時効の利益は <strong>あらかじめ放棄できない<\/strong>（民法146条）。完成前の不援用合意は無効。<\/p>"}, {"id": "02-Q11", "cat": "02", "q": "根抵当権は、債務者との取引によって生ずる債権について、その担保すべき範囲を限定せずに、債務者に対する一切の債権を担保するものとして設定することができる。", "a": "X", "e": "<p>根抵当権の被担保債権の範囲は、一定の範囲に属する不特定の債権として <strong>限定して定めなければならない<\/strong>。包括根抵当（一切の債権）は認められない（民法398条の2）。<\/p>"}, {"id": "02-Q12", "cat": "02", "q": "元本の確定前においては、根抵当権者から被担保債権のみを取得した者は、その債権について根抵当権を行使することはできない。", "a": "O", "e": "<p>元本確定前は根抵当権に <strong>随伴性がない<\/strong> ため、被担保債権を取得しても根抵当権は移転しない（民法398条の7）。<\/p>"}, {"id": "02-Q13", "cat": "02", "q": "（普通）抵当権者は、利息その他の定期金を請求する権利を有するときは、原則としてその満期となった最後の2年分についてのみ抵当権を行使することができる。", "a": "O", "e": "<p>抵当権による利息等の優先弁済は原則 <strong>最後の2年分<\/strong> に限られる（民法375条）。<\/p>"}, {"id": "02-Q14", "cat": "02", "q": "債務の不履行又はこれによる損害の発生・拡大に関して債権者に過失があったときは、裁判所は、これを考慮して損害賠償の責任及びその額を定める。", "a": "O", "e": "<p>債権者に過失があれば、裁判所は <strong>過失相殺<\/strong> を考慮して責任・額を定める（民法418条）。「考慮することができる」ではなく必ず考慮する点に注意。<\/p>"}, {"id": "02-Q15", "cat": "02", "q": "債権者は、自己の債権を保全するため必要があるときは、債務者の一身に専属する権利であっても、債権者代位権により行使することができる。", "a": "X", "e": "<p>債務者の <strong>一身専属権<\/strong> 及び差押禁止権利は、債権者代位権の対象とならない（民法423条1項ただし書）。<\/p>"}, {"id": "02-Q16", "cat": "02", "q": "詐害行為取消権は、裁判外で行使することができる。", "a": "X", "e": "<p>詐害行為取消権は <strong>裁判所に請求<\/strong> して行使する（民法424条1項）。裁判外では行使できない。<\/p>"}, {"id": "02-Q17", "cat": "02", "q": "債権譲渡は、譲渡人が債務者に通知をし、又は債務者が承諾をしなければ、債務者に対抗することができず、第三者に対抗するにはこれらを確定日付のある証書によってしなければならない。", "a": "O", "e": "<p>債務者対抗要件は <strong>通知・承諾<\/strong>、第三者対抗要件は <strong>確定日付のある証書<\/strong> による通知・承諾（民法467条）。<\/p>"}, {"id": "02-Q18", "cat": "02", "q": "同一債権が二重に譲渡され、いずれも確定日付のある証書で通知された場合の優劣は、確定日付の先後ではなく、通知が債務者に到達した日時の先後で決まる。", "a": "O", "e": "<p>確定日付ある通知が競合する場合の優劣は、<strong>通知の到達の先後<\/strong> で決まる（判例）。確定日付自体の先後ではない。<\/p>"}, {"id": "02-Q19", "cat": "02", "q": "相殺の意思表示には、条件又は期限を付することができる。", "a": "X", "e": "<p>相殺の意思表示には <strong>条件・期限を付すことができない<\/strong>（民法506条1項後段）。<\/p>"}, {"id": "02-Q20", "cat": "02", "q": "時効によって消滅した債権であっても、その消滅以前に相殺に適するようになっていた場合には、その債権者はこれを自働債権として相殺することができる。", "a": "O", "e": "<p>時効消滅前に相殺適状にあった債権は、<strong>自働債権として相殺できる<\/strong>（民法508条）。<\/p>"}, {"id": "02-Q21", "cat": "02", "q": "1個の債務について元本・利息・費用を支払うべき場合に、弁済者が全部を消滅させるのに足りない給付をしたときは、別段の合意がない限り、費用→利息→元本の順に充当する。", "a": "O", "e": "<p>法定充当の順序は <strong>費用→利息→元本<\/strong>（民法489条1項）。<\/p>"}, {"id": "02-Q22", "cat": "02", "q": "受領権者としての外観を有する者に対してした弁済は、弁済者が善意であれば、過失があっても有効である。", "a": "X", "e": "<p>受領権者としての外観を有する者への弁済が有効となるのは、弁済者が <strong>善意かつ無過失<\/strong> の場合に限られる（民法478条）。<\/p>"}, {"id": "02-Q23", "cat": "02", "q": "相続人は、相続開始の時から、被相続人の一身に専属したものを含め、その財産に属した一切の権利義務を承継する。", "a": "X", "e": "<p>相続人は被相続人の権利義務を承継するが、<strong>被相続人の一身に専属したもの（一身専属権）は承継しない<\/strong>（民法896条ただし書）。<\/p>"}, {"id": "02-Q24", "cat": "02", "q": "相続の放棄をした者は、その相続に関しては、初めから相続人とならなかったものとみなされる。", "a": "O", "e": "<p>放棄した者は <strong>初めから相続人でなかった<\/strong> ものとみなされる（民法939条）。なお放棄は家庭裁判所への申述で行う。<\/p>"}, {"id": "02-Q25", "cat": "02", "q": "共同相続人の1人が遺産分割により被相続人の金銭債務の全てを承継した場合、その分割の効果として、債権者は他の共同相続人に対して当該債務の履行を請求できなくなる。", "a": "X", "e": "<p>可分の金銭債務は相続により法定相続分に応じて各相続人に当然分割承継される。遺産分割の内容を <strong>債権者の承諾なく対抗できない<\/strong> ため、債権者は各相続人に法定相続分に応じた請求ができる。<\/p>"}, {"id": "02-Q26", "cat": "02", "q": "破産債権とは、破産者に対する財産上の請求権であって、破産手続開始後の原因に基づいて生じたものをいう。", "a": "X", "e": "<p>破産債権は、原則として破産手続開始 <strong>前<\/strong> の原因に基づいて生じた財産上の請求権をいう（破産法2条5項）。「開始後」は誤り。<\/p>"}, {"id": "02-Q27", "cat": "02", "q": "別除権は、破産財団に属する財産につき特別の先取特権・質権・抵当権を有する者に認められ、破産手続によらないで行使することができる。", "a": "O", "e": "<p>別除権は <strong>破産手続によらずに<\/strong> 行使できる（破産法65条）。<\/p>"}, {"id": "02-Q28", "cat": "02", "q": "犯罪収益移転防止法上、貸金業者が確認すべき自然人の本人特定事項は、氏名・住居・生年月日である。", "a": "O", "e": "<p>自然人の本人特定事項は <strong>氏名・住居・生年月日<\/strong>、法人は <strong>名称・本店等の所在地<\/strong>（犯収法4条1項）。<\/p>"}, {"id": "02-Q29", "cat": "02", "q": "通常の特定取引（ハイリスク取引でないもの）において、貸金業者が確認すべき事項は、自然人の場合、本人特定事項のほか、取引を行う目的及び職業である。", "a": "O", "e": "<p>自然人の取引時確認事項は、本人特定事項＋ <strong>取引目的＋職業<\/strong>（犯収法4条1項）。法人は事業の内容・実質的支配者も確認する。<\/p>"}, {"id": "02-Q30", "cat": "02", "q": "疑わしい取引の届出を行うか否かは、公表されている「疑わしい取引の参考事例」に該当する取引はもれなく届け出る必要があり、これに該当しない取引は一切届出の対象とならない。", "a": "X", "e": "<p>参考事例はあくまで例示であり、それに該当しない取引でも、総合的な判断により疑わしいと認められれば <strong>届出の対象となり得る<\/strong>。「該当しなければ対象外」は誤り。<\/p>"}, {"id": "03-Q1", "cat": "03", "q": "個人情報とは、生存する個人に関する情報であって、氏名・生年月日その他の記述等により特定の個人を識別できるもの、又は個人識別符号が含まれるものをいう。", "a": "O", "e": "<p>個人情報は <strong>生存する個人<\/strong> に関する情報に限られる（個人情報保護法2条1項）。死者の情報は原則として含まれない。<\/p>"}, {"id": "03-Q2", "cat": "03", "q": "クレジットカード番号や電話番号は、個人識別符号に該当する。", "a": "X", "e": "<p>個人識別符号は、指紋・DNA・旅券番号・運転免許証番号・マイナンバー等、政令で定めるものをいう。<strong>クレジットカード番号や電話番号は個人識別符号に該当しない<\/strong>。<\/p>"}, {"id": "03-Q3", "cat": "03", "q": "要配慮個人情報とは、本人の人種、信条、社会的身分、病歴、犯罪の経歴、犯罪により害を被った事実など、不当な差別・偏見等が生じないよう取扱いに特に配慮を要するものとして政令等で定める記述が含まれる個人情報をいう。", "a": "O", "e": "<p>要配慮個人情報の定義として正しい（個人情報保護法2条3項）。取得には原則として本人の同意が必要。<\/p>"}, {"id": "03-Q4", "cat": "03", "q": "個人情報取扱事業者は、特定された利用目的の達成に必要な範囲を超えて個人情報を取り扱う場合には、あらかじめ本人の同意を得なければならない。", "a": "O", "e": "<p>目的外利用には原則として <strong>あらかじめ本人の同意<\/strong> が必要（個人情報保護法18条1項）。<\/p>"}, {"id": "03-Q5", "cat": "03", "q": "個人情報取扱事業者は、合併その他の事由により他の事業者から事業を承継して個人情報を取得する場合、承継前の利用目的の達成に必要な範囲内で取り扱うときであっても、あらためて本人の同意を得なければならない。", "a": "X", "e": "<p>事業承継に伴う取得で、承継前の利用目的の範囲内で取り扱うときは、<strong>あらためて本人の同意を得る必要はない<\/strong>（目的外利用に当たらない）。<\/p>"}, {"id": "03-Q6", "cat": "03", "q": "個人情報取扱事業者は、利用目的を変更する場合には、変更前の利用目的と関連性を有すると合理的に認められる範囲を超えて変更してはならない。", "a": "O", "e": "<p>利用目的の変更は <strong>変更前と関連性を有すると合理的に認められる範囲<\/strong> に限られる（個人情報保護法17条2項）。<\/p>"}, {"id": "03-Q7", "cat": "03", "q": "個人情報取扱事業者が個人データを第三者に提供する場合は、いかなる場合もあらかじめ本人の同意を得なければならず、例外はない。", "a": "X", "e": "<p>法令に基づく場合、人の生命・身体・財産の保護に必要で同意取得が困難な場合、オプトアウト、委託・事業承継・共同利用等の <strong>例外<\/strong> がある（個人情報保護法27条）。<\/p>"}, {"id": "03-Q8", "cat": "03", "q": "金融分野における個人情報取扱事業者が、与信事業に係る個人の返済能力に関する情報を個人信用情報機関へ提供するに当たっては、オプトアウトの手続によることができる。", "a": "X", "e": "<p>与信事業に係る返済能力情報を個人信用情報機関へ提供する場合は、オプトアウトによることはできず、<strong>本人の同意<\/strong> を得る必要がある（金融分野ガイドライン）。<\/p>"}, {"id": "03-Q9", "cat": "03", "q": "金融分野における個人情報取扱事業者が個人データの第三者提供について本人の同意を得る際は、原則として書面（電磁的記録を含む）によることとされている。", "a": "O", "e": "<p>金融分野ガイドラインでは、第三者提供の同意は原則 <strong>書面（電磁的記録を含む）<\/strong> によることとされている（一般法より上乗せの規律）。<\/p>"}, {"id": "03-Q10", "cat": "03", "q": "日本貸金業協会の自主規制基本規則上、協会員は、債務者等に対して貸付けの契約に係る勧誘を行うに際しては、当該債務者等から勧誘を行うことについての承諾を得なければならない。", "a": "O", "e": "<p>自主規制基本規則上、勧誘に先立ち <strong>勧誘についての承諾<\/strong> を得ることが求められる。<\/p>"}, {"id": "03-Q11", "cat": "03", "q": "自主規制基本規則上、協会員は、勧誘対象者が契約を締結しない旨の意思を表示した場合、その意思表示のあった日から最低1年間は、当該勧誘に係る取引及び類似取引の勧誘を行ってはならない。", "a": "O", "e": "<p>いわゆる「再勧誘の禁止」として、契約しない旨の意思表示後 <strong>最低1年間<\/strong> は再勧誘を行わないこととされている（自主規制基本規則）。<\/p>"}, {"id": "03-Q12", "cat": "03", "q": "自主規制基本規則上、協会員は、資金需要者等が身体的・精神的な障害等により契約内容の理解が困難であることを認識した場合には、貸付けの契約に係る勧誘を行ってはならない。", "a": "O", "e": "<p>理解困難な状態を認識した場合の勧誘は行わないこととされている（資金需要者保護の観点）。<\/p>"}, {"id": "03-Q13", "cat": "03", "q": "日本貸金業協会は、貸金業法に基づく認可法人であり、貸金業相談・紛争解決センターによる苦情処理・紛争解決（指定ADR）の業務を行う。", "a": "O", "e": "<p>日本貸金業協会は <strong>認可法人<\/strong> であり、指定紛争解決機関として苦情処理・紛争解決手続を行う。<\/p>"}, {"id": "03-Q14", "cat": "03", "q": "紛争解決等業務に関する規則上、当事者である協会員等は、正当な理由なく、事情の聴取や資料提出の求めを拒むことはできない。", "a": "O", "e": "<p>協会員等は、正当な理由なく <strong>事情聴取・資料提出の求めを拒めない<\/strong>（手続応諾・協力義務）。<\/p>"}, {"id": "03-Q15", "cat": "03", "q": "消費者契約法上、事業者の不実告知や断定的判断の提供により消費者が誤認して契約の申込み等の意思表示をした場合、消費者はその意思表示を取り消すことができる。", "a": "O", "e": "<p>不実告知・断定的判断の提供・不利益事実の不告知等による誤認の場合、消費者は意思表示を <strong>取り消せる<\/strong>（消費者契約法4条）。<\/p>"}, {"id": "04-Q1", "cat": "04", "q": "貸借対照表は、一定時点における企業の財政状態（資産・負債・純資産）を表す財務諸表である。", "a": "O", "e": "<p>貸借対照表（B/S）は <strong>一定時点<\/strong> の財政状態を表す。一定期間の経営成績を表すのは損益計算書。<\/p>"}, {"id": "04-Q2", "cat": "04", "q": "会社計算規則上、資産の部は、流動資産・固定資産・繰延資産に区分しなければならない。", "a": "O", "e": "<p>資産の部は <strong>流動資産・固定資産・繰延資産<\/strong> に区分する（会社計算規則）。<\/p>"}, {"id": "04-Q3", "cat": "04", "q": "会社計算規則上、株式会社の純資産の部は、株主資本・評価・換算差額等・株式引受権・新株予約権に区分しなければならない。", "a": "O", "e": "<p>純資産の部は <strong>株主資本／評価・換算差額等／株式引受権／新株予約権<\/strong> に区分する（会社計算規則）。<\/p>"}, {"id": "04-Q4", "cat": "04", "q": "貸借対照表では、資産の部の合計額から負債の部の合計額を差し引いた額は、純資産の部の合計額と一致する。", "a": "O", "e": "<p>資産 − 負債 ＝ 純資産（貸借平均の原理）。両者は一致する。<\/p>"}, {"id": "04-Q5", "cat": "04", "q": "ワン・イヤー・ルール（1年基準）によれば、1年以内に現金化・費用化される資産は原則として流動資産に分類される。", "a": "O", "e": "<p>正常営業循環基準に該当しないものは、<strong>1年基準<\/strong> により流動・固定を区分する。<\/p>"}, {"id": "04-Q6", "cat": "04", "q": "損益計算書は、一定期間における企業の経営成績を表し、収益から費用を差し引いて利益を計算する。", "a": "O", "e": "<p>損益計算書（P/L）は <strong>一定期間<\/strong> の経営成績を表す。<\/p>"}, {"id": "04-Q7", "cat": "04", "q": "売上総利益とは、売上高から売上原価並びに販売費及び一般管理費を控除したものをいう。", "a": "X", "e": "<p>売上総利益 ＝ 売上高 − <strong>売上原価<\/strong>。販売費及び一般管理費を差し引いたものは <strong>営業利益<\/strong> である。<\/p>"}, {"id": "04-Q8", "cat": "04", "q": "経常利益とは、営業利益に営業外収益を加え、営業外費用を差し引いたものをいう。", "a": "O", "e": "<p>経常利益 ＝ 営業利益 ＋ 営業外収益 − 営業外費用。特別利益・特別損失は含めない。<\/p>"}, {"id": "04-Q9", "cat": "04", "q": "当期純利益とは、経常利益から法人税等を控除した額をいう。", "a": "X", "e": "<p>経常利益に特別利益を加え特別損失を控除した <strong>税引前当期純利益<\/strong> から法人税等を控除して当期純利益を求める。経常利益から直接法人税等を引くのではない。<\/p>"}, {"id": "04-Q10", "cat": "04", "q": "企業会計原則の一般原則のうち、企業会計は企業の財政状態及び経営成績について真実な報告を提供しなければならないとするものを、真実性の原則という。", "a": "O", "e": "<p><strong>真実性の原則<\/strong> の説明として正しい。<\/p>"}, {"id": "04-Q11", "cat": "04", "q": "企業会計はその処理の原則・手続を毎期継続して適用し、みだりに変更してはならない。これを継続性の原則という。", "a": "O", "e": "<p><strong>継続性の原則<\/strong> の説明として正しい。<\/p>"}, {"id": "04-Q12", "cat": "04", "q": "複式簿記では、一つの取引を借方（左側）と貸方（右側）に同額ずつ記録する（貸借平均の原理）。", "a": "O", "e": "<p>複式簿記の <strong>貸借平均の原理<\/strong>。借方＝左、貸方＝右。<\/p>"}, {"id": "04-Q13", "cat": "04", "q": "可処分所得とは、収入金額から所得税・住民税・社会保険料などの非消費支出を差し引いた、実際に使える金額をいう。", "a": "O", "e": "<p>可処分所得 ＝ 収入 − 非消費支出（手取り収入）。<\/p>"}, {"id": "04-Q14", "cat": "04", "q": "流動比率は「流動資産 ÷ 流動負債 × 100」で計算され、値が高いほど短期的な支払能力が高いと評価される。", "a": "O", "e": "<p>流動比率 ＝ 流動資産 ÷ 流動負債 × 100。高いほど短期支払能力が高い。<\/p>"}, {"id": "04-Q15", "cat": "04", "q": "自己資本比率は、総資本（総資産）に占める自己資本（純資産）の割合であり、この比率が高いほど財務の安全性が高いといえる。", "a": "O", "e": "<p>自己資本比率 ＝ 自己資本 ÷ 総資本 × 100。高いほど借入依存度が低く安全性が高い。<\/p>"}]};
+const CSV_HEADER = "問題ID,分野,問題文,正答(O/X),あなたの解答(O/X),正誤(自動でなくてOK),復習フラグ(1=要復習)";
+const LS_KEY = "kashikinn.quiz.v1";
+
+let store = { a: {} };
+try { const s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && s.a) store = s; } catch (e) {}
+function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch (e) {} }
+
+const byId = {};
+DATA.questions.forEach(q => { byId[q.id] = q; });
+const $ = id => document.getElementById(id);
+
+let session = null;
+
+function showView(name) {
+  ["home", "quiz", "result"].forEach(v => { $("view-" + v).hidden = (v !== name); });
+  window.scrollTo(0, 0);
+}
+
+function catStats(pref) {
+  let answered = 0, correct = 0;
+  DATA.questions.forEach(q => {
+    if (q.cat !== pref) return;
+    const rec = store.a[q.id];
+    if (rec && rec.my) { answered++; if (rec.my === q.a) correct++; }
+  });
+  return { answered, correct };
+}
+
+function weakIds() {
+  return DATA.questions.filter(q => {
+    const rec = store.a[q.id];
+    return rec && ((rec.my && rec.my !== q.a) || rec.f);
+  }).map(q => q.id);
+}
+
+function renderHome() {
+  let answered = 0, correct = 0;
+  DATA.questions.forEach(q => {
+    const rec = store.a[q.id];
+    if (rec && rec.my) { answered++; if (rec.my === q.a) correct++; }
+  });
+  const weak = weakIds().length;
+  const rate = answered ? Math.round(correct / answered * 100) : 0;
+  $("stats").innerHTML =
+    '<div class="stat"><span class="n">' + answered + '<span style="font-size:.75rem;color:var(--muted)">/' + DATA.questions.length + '</span></span><span class="l">回答済み</span></div>' +
+    '<div class="stat"><span class="n">' + (answered ? rate + "%" : "—") + '</span><span class="l">正答率</span></div>' +
+    '<div class="stat"><span class="n">' + weak + '</span><span class="l">要復習</span></div>';
+
+  const catBox = $("cat-modes");
+  catBox.innerHTML = "";
+  Object.keys(DATA.cats).forEach(pref => {
+    const c = DATA.cats[pref];
+    const s = catStats(pref);
+    const pct = Math.round(s.answered / c.count * 100);
+    const b = document.createElement("button");
+    b.className = "mode";
+    b.innerHTML =
+      '<span class="mode-head"><span class="mode-name">' + pref + " " + c.name + '</span><span class="mode-range">' + c.range + "・" + c.count + '問</span></span>' +
+      '<span class="bar"><span style="width:' + pct + '%"></span></span>' +
+      '<span class="mode-foot">回答 ' + s.answered + "/" + c.count + (s.answered ? "・正答率 " + Math.round(s.correct / s.answered * 100) + "%" : "") + '</span>';
+    b.addEventListener("click", () => startSession({ type: "cat", pref }));
+    catBox.appendChild(b);
+  });
+
+  const spBox = $("special-modes");
+  spBox.innerHTML = "";
+  const all = document.createElement("button");
+  all.className = "mode mode--special";
+  all.innerHTML = '<span class="mode-head"><span class="mode-name">全問シャッフル</span><span class="mode-range">103問をランダムに出題</span></span>';
+  all.addEventListener("click", () => startSession({ type: "all" }));
+  spBox.appendChild(all);
+
+  const wk = document.createElement("button");
+  wk.className = "mode mode--special";
+  wk.disabled = weak === 0;
+  wk.innerHTML = '<span class="mode-head"><span class="mode-name">苦手だけ</span><span class="mode-range">間違えた問題＋復習フラグ ' + weak + '問</span></span>';
+  wk.addEventListener("click", () => startSession({ type: "weak" }));
+  spBox.appendChild(wk);
+}
+
+function startSession(mode) {
+  let ids;
+  if (mode.type === "cat") {
+    ids = DATA.questions.filter(q => q.cat === mode.pref).map(q => q.id);
+    let start = ids.findIndex(id => !(store.a[id] && store.a[id].my));
+    if (start > 0) ids = ids.slice(start).concat(ids.slice(0, start));
+  } else if (mode.type === "all") {
+    ids = DATA.questions.map(q => q.id);
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+  } else {
+    ids = weakIds();
+  }
+  if (!ids.length) return;
+  session = { mode, ids, idx: 0, results: [] };
+  showView("quiz");
+  renderQuestion();
+}
+
+function modeLabel(mode) {
+  if (mode.type === "cat") return DATA.cats[mode.pref].name;
+  if (mode.type === "all") return "全問シャッフル";
+  return "苦手だけ";
+}
+
+function renderQuestion() {
+  const q = byId[session.ids[session.idx]];
+  $("whereLabel").textContent = modeLabel(session.mode);
+  $("countLabel").textContent = (session.idx + 1) + " / " + session.ids.length;
+  $("trackFill").style.width = (session.idx / session.ids.length * 100) + "%";
+  $("qMeta").textContent = q.id + "・" + DATA.cats[q.cat].name;
+  $("qFlagChip").hidden = !(store.a[q.id] && store.a[q.id].f);
+  $("qText").textContent = q.q;
+  $("feedback").hidden = true;
+  $("ansO").disabled = false;
+  $("ansX").disabled = false;
+}
+
+function answer(my) {
+  const q = byId[session.ids[session.idx]];
+  const ok = my === q.a;
+  const prev = store.a[q.id] || {};
+  store.a[q.id] = { my, f: prev.f || 0 };
+  save();
+  session.results.push({ id: q.id, ok });
+  $("ansO").disabled = true;
+  $("ansX").disabled = true;
+  const v = $("verdict");
+  v.className = "verdict " + (ok ? "verdict--ok" : "verdict--ng");
+  v.textContent = (ok ? "正解! " : "不正解… ") + "正答は " + (q.a === "O" ? "◯" : "✕");
+  $("expl").innerHTML = q.e;
+  $("flagBtn").setAttribute("aria-pressed", store.a[q.id].f ? "true" : "false");
+  $("feedback").hidden = false;
+  $("trackFill").style.width = ((session.idx + 1) / session.ids.length * 100) + "%";
+}
+
+function toggleFlag() {
+  const q = byId[session.ids[session.idx]];
+  const rec = store.a[q.id] || {};
+  rec.f = rec.f ? 0 : 1;
+  store.a[q.id] = rec;
+  save();
+  $("flagBtn").setAttribute("aria-pressed", rec.f ? "true" : "false");
+  $("qFlagChip").hidden = !rec.f;
+}
+
+function next() {
+  session.idx++;
+  if (session.idx < session.ids.length) { renderQuestion(); } else { finish(); }
+}
+
+function finish() {
+  const total = session.results.length;
+  const correct = session.results.filter(r => r.ok).length;
+  $("scoreBig").innerHTML = correct + '<small> / ' + total + '問</small>';
+  $("scoreRate").textContent = modeLabel(session.mode) + "・正答率 " + (total ? Math.round(correct / total * 100) : 0) + "%";
+  const box = $("wrongList");
+  box.innerHTML = "";
+  const wrongs = session.results.filter(r => !r.ok);
+  if (wrongs.length) {
+    const h = document.createElement("p");
+    h.className = "section-label";
+    h.textContent = "間違えた問題（タップで解説）";
+    box.appendChild(h);
+    wrongs.forEach(r => {
+      const q = byId[r.id];
+      const d = document.createElement("details");
+      d.innerHTML = "<summary><span class='wid'>" + q.id + "</span>" + q.q.slice(0, 40) + (q.q.length > 40 ? "…" : "") + "</summary>" +
+        "<p style='margin:.6rem 0 0;font-weight:700'>正答: " + (q.a === "O" ? "◯" : "✕") + "</p>" + q.e;
+      box.appendChild(d);
+    });
+  }
+  const sync = $("syncBox");
+  sync.hidden = false;
+  sync.className = "syncbox";
+  if (getToken()) {
+    const status = (msg, cls) => { sync.textContent = msg; sync.className = "syncbox" + (cls ? " syncbox--" + cls : ""); };
+    pushCsv(status).catch(e => status(ghErrorMessage(e), "ng"));
+  } else {
+    sync.textContent = "ホームの「連携設定」でGitHubトークンを設定すると、ここから先（保存→AI苦手分析）が全自動になります。";
+  }
+  showView("result");
+}
+
+function buildCsv() {
+  const rows = [CSV_HEADER];
+  DATA.questions.forEach(q => {
+    const rec = store.a[q.id] || {};
+    const cat = DATA.cats[q.cat];
+    rows.push([q.id, cat.field, q.q, q.a, rec.my || "", "", rec.f ? "1" : ""].join(","));
+  });
+  return rows.join("\n") + "\n";
+}
+
+/* ---- GitHub連携 ---- */
+const GH = { owner: "mae39kuma-gif", repo: "kashikinn", branch: "main",
+             csv: "progress/results.csv", report: "progress/ai_report.md" };
+const TOKEN_KEY = "kashikinn.gh.token";
+function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } }
+function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+
+function b64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+async function gh(path, opts) {
+  opts = opts || {};
+  const res = await fetch("https://api.github.com" + path, {
+    method: opts.method || "GET",
+    body: opts.body,
+    headers: Object.assign(
+      { "Authorization": "Bearer " + getToken(),
+        "Accept": opts.raw ? "application/vnd.github.raw+json" : "application/vnd.github+json" },
+      opts.body ? { "Content-Type": "application/json" } : {}),
+  });
+  if (!res.ok) { const err = new Error("HTTP " + res.status); err.status = res.status; throw err; }
+  return opts.raw ? res.text() : res.json();
+}
+
+function ghErrorMessage(e) {
+  if (e && e.status === 401) return "トークンが無効です。「連携設定」でトークンを設定し直してください。";
+  if (e && e.status === 403) return "権限が足りません。トークンの Contents 権限（Read and write）を確認してください。";
+  if (e && e.status === 404) return "リポジトリにアクセスできません。トークンの対象リポジトリ設定を確認してください。";
+  return "接続できませんでした。claude.ai 上のアプリでは外部通信が遮断されるため直接保存は使えません。「コピー」方式を使うか、GitHub Pages 版で開いてください。";
+}
+
+async function pushCsv(status) {
+  if (!getToken()) { const e = new Error("no token"); e.status = 401; throw e; }
+  status("GitHubに保存中…");
+  let sha;
+  try {
+    const meta = await gh("/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.csv + "?ref=" + GH.branch);
+    sha = meta.sha;
+  } catch (e) { if (e.status !== 404) throw e; }
+  const body = { message: "解答を記録（一問一答アプリから）", content: b64(buildCsv()), branch: GH.branch };
+  if (sha) body.sha = sha;
+  await gh("/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.csv, { method: "PUT", body: JSON.stringify(body) });
+  status("GitHubに保存しました ✓ AI苦手分析が自動実行されます（反映まで1〜2分）", "ok");
+}
+
+function mdEsc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function mdInline(s) { return mdEsc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"); }
+function mdToHtml(md) {
+  const out = []; let inUl = false;
+  md.split(/\r?\n/).forEach(line => {
+    const l = line.trim();
+    const li = l.match(/^[-*]\s+(.*)/);
+    const h = l.match(/^(#{1,4})\s+(.*)/);
+    if (li) { if (!inUl) { out.push("<ul>"); inUl = true; } out.push("<li>" + mdInline(li[1]) + "</li>"); return; }
+    if (inUl) { out.push("</ul>"); inUl = false; }
+    if (h) { const lvl = Math.min(h[1].length + 1, 4); out.push("<h" + lvl + ">" + mdInline(h[2]) + "</h" + lvl + ">"); }
+    else if (l) { out.push("<p>" + mdInline(l) + "</p>"); }
+  });
+  if (inUl) out.push("</ul>");
+  return out.join("");
+}
+
+async function openReport() {
+  $("reportBody").innerHTML = '<p style="color:var(--muted)">読み込み中…</p>';
+  if (!$("reportDlg").open) $("reportDlg").showModal();
+  if (!getToken()) {
+    $("reportBody").innerHTML = "<p>「連携設定」でGitHubトークンを設定すると、ここで最新のAI分析レポートを読めます。</p>";
+    return;
+  }
+  try {
+    const md = await gh("/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.report + "?ref=" + GH.branch, { raw: true });
+    $("reportBody").innerHTML = mdToHtml(md);
+  } catch (e) {
+    $("reportBody").innerHTML = "<p>" + (e.status === 404
+      ? "レポートはまだ生成されていません。解答を保存してから1〜2分後に「再読み込み」を押してください。"
+      : ghErrorMessage(e)) + "</p>";
+  }
+}
+
+function renderGhStatus() {
+  $("ghStatus").textContent = getToken() ? "連携済み ✓" : "未設定";
+}
+
+$("ansO").addEventListener("click", () => answer("O"));
+$("ansX").addEventListener("click", () => answer("X"));
+$("nextBtn").addEventListener("click", next);
+$("flagBtn").addEventListener("click", toggleFlag);
+$("quitBtn").addEventListener("click", () => { renderHome(); showView("home"); });
+$("homeBtn").addEventListener("click", () => { renderHome(); showView("home"); });
+$("homeBtn2").addEventListener("click", () => { renderHome(); showView("home"); });
+$("retryBtn").addEventListener("click", () => startSession(session.mode));
+
+$("exportBtn").addEventListener("click", () => {
+  $("csvArea").value = buildCsv();
+  $("copiedMsg").hidden = true;
+  $("exportDlg").showModal();
+});
+$("closeDlg").addEventListener("click", () => $("exportDlg").close());
+$("copyBtn").addEventListener("click", async () => {
+  const area = $("csvArea");
+  try {
+    await navigator.clipboard.writeText(area.value);
+    $("copiedMsg").hidden = false;
+  } catch (e) {
+    area.focus(); area.select();
+    try { document.execCommand("copy"); $("copiedMsg").hidden = false; } catch (e2) {}
+  }
+});
+$("resetBtn").addEventListener("click", () => {
+  if (confirm("すべての解答記録と復習フラグを消します。よろしいですか？")) {
+    store = { a: {} };
+    save();
+    renderHome();
+  }
+});
+
+$("directSaveBtn").addEventListener("click", () => {
+  if (!getToken()) { $("exportDlg").close(); $("tokenDlg").showModal(); return; }
+  const el = $("dlgSync");
+  const status = (msg, cls) => { el.textContent = msg; el.style.color = cls === "ok" ? "var(--ok)" : (cls === "ng" ? "var(--ng)" : "var(--muted)"); };
+  pushCsv(status).catch(e => status(ghErrorMessage(e), "ng"));
+});
+
+$("ghSetupBtn").addEventListener("click", () => {
+  $("tokenInput").value = "";
+  $("tokenMsg").hidden = true;
+  $("tokenDlg").showModal();
+});
+$("tokenSaveBtn").addEventListener("click", () => {
+  const t = $("tokenInput").value.trim();
+  if (!t) { $("tokenMsg").textContent = "トークンを入力してください"; $("tokenMsg").hidden = false; return; }
+  setToken(t);
+  renderGhStatus();
+  $("tokenMsg").textContent = "保存しました ✓";
+  $("tokenMsg").hidden = false;
+});
+$("tokenClearBtn").addEventListener("click", () => {
+  setToken("");
+  renderGhStatus();
+  $("tokenMsg").textContent = "連携を解除しました";
+  $("tokenMsg").hidden = false;
+});
+$("tokenCloseBtn").addEventListener("click", () => $("tokenDlg").close());
+$("reportBtn").addEventListener("click", openReport);
+$("reportReloadBtn").addEventListener("click", openReport);
+$("reportCloseBtn").addEventListener("click", () => $("reportDlg").close());
+
+renderGhStatus();
+renderHome();
+showView("home");
+</script>
+</body>
+</html>
