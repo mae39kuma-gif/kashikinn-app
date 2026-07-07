@@ -54,6 +54,10 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .stat{background:var(--card);border:1px solid var(--line);border-radius:.5rem;padding:.55rem .6rem}
 .stat .n{display:block;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .stat .l{display:block;font-size:.68rem;color:var(--muted);letter-spacing:.08em}
+.stats--sub{margin-top:-.5rem}
+button.stat{text-align:left;font-family:inherit}
+.stat--exam .n{color:var(--accent)}
+.stat--exam .l::after{content:" ✎";opacity:.7}
 .section-label{margin:1.3rem 0 .5rem;font-size:.72rem;letter-spacing:.14em;color:var(--muted)}
 .modes{display:flex;flex-direction:column;gap:.55rem}
 .mode{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:.6rem;padding:.75rem .85rem;font-size:.9rem;transition:border-color .15s}
@@ -146,6 +150,7 @@ dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid va
       <p class="sub">直近5回の出題論点をオリジナル◯×に再構成した練習帳</p>
     </header>
     <div class="stats" id="stats"></div>
+    <div class="stats stats--sub" id="stats2"></div>
     <p class="section-label">分野を選んで開始</p>
     <div class="modes" id="cat-modes"></div>
     <p class="section-label">まとめて演習</p>
@@ -243,6 +248,16 @@ dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid va
   </div>
 </dialog>
 
+<dialog id="examDlg">
+  <h2>試験日の設定</h2>
+  <p style="font-size:.82rem;margin:.2rem 0 .5rem">カウントダウンの基準日を設定します。試験は例年11月の第3日曜です。正確な日程は日本貸金業協会の公式サイトで確認してください。</p>
+  <input id="examInput" type="date">
+  <div class="dlgbtns">
+    <button class="btn btn--primary" id="examSaveBtn">保存</button>
+    <button class="btn" id="examCloseBtn">閉じる</button>
+  </div>
+</dialog>
+
 <dialog id="reportDlg">
   <h2>AI苦手分析レポート</h2>
   <div class="report" id="reportBody"></div>
@@ -260,6 +275,31 @@ const LS_KEY = "kashikinn.quiz.v1";
 let store = { a: {} };
 try { const s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && s.a) store = s; } catch (e) {}
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch (e) {} }
+
+/* ---- 学習日数・試験日カウントダウン ---- */
+const DEFAULT_EXAM = "2026-11-15";  // 例年11月の第3日曜（アプリ内で変更可）
+function dateKey(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+if (!store.days) store.days = {};
+if (!(dateKey(new Date()) in store.days)) { store.days[dateKey(new Date())] = 0; save(); }
+function markAnswered() {
+  const k = dateKey(new Date());
+  store.days[k] = (store.days[k] || 0) + 1;
+}
+function studyStreak() {
+  let n = 0;
+  const d = new Date();
+  while (dateKey(d) in store.days) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function daysToExam() {
+  const parts = (store.exam || DEFAULT_EXAM).split("-").map(Number);
+  const target = new Date(parts[0], parts[1] - 1, parts[2]);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((target - now) / 86400000);
+}
 
 const byId = {};
 DATA.questions.forEach(q => { byId[q.id] = q; });
@@ -301,6 +341,17 @@ function renderHome() {
     '<div class="stat"><span class="n">' + answered + '<span style="font-size:.75rem;color:var(--muted)">/' + DATA.questions.length + '</span></span><span class="l">回答済み</span></div>' +
     '<div class="stat"><span class="n">' + (answered ? rate + "%" : "—") + '</span><span class="l">正答率</span></div>' +
     '<div class="stat"><span class="n">' + weak + '</span><span class="l">要復習</span></div>';
+
+  const dte = daysToExam();
+  const dteText = dte > 1 ? "あと" + dte + "日" : dte === 1 ? "あと1日" : dte === 0 ? "本日!" : "終了";
+  $("stats2").innerHTML =
+    '<button class="stat stat--exam" id="examBtn"><span class="n">' + dteText + '</span><span class="l">試験まで</span></button>' +
+    '<div class="stat"><span class="n">' + Object.keys(store.days).length + '<span style="font-size:.75rem;color:var(--muted)">日</span></span><span class="l">学習日数</span></div>' +
+    '<div class="stat"><span class="n">' + studyStreak() + '<span style="font-size:.75rem;color:var(--muted)">日</span></span><span class="l">連続学習</span></div>';
+  $("examBtn").addEventListener("click", () => {
+    $("examInput").value = store.exam || DEFAULT_EXAM;
+    $("examDlg").showModal();
+  });
 
   const catBox = $("cat-modes");
   catBox.innerHTML = "";
@@ -379,6 +430,7 @@ function answer(my) {
   const ok = my === q.a;
   const prev = store.a[q.id] || {};
   store.a[q.id] = { my, f: prev.f || 0 };
+  markAnswered();
   save();
   session.results.push({ id: q.id, ok });
   $("ansO").disabled = true;
@@ -597,6 +649,12 @@ $("tokenClearBtn").addEventListener("click", () => {
   $("tokenMsg").hidden = false;
 });
 $("tokenCloseBtn").addEventListener("click", () => $("tokenDlg").close());
+$("examSaveBtn").addEventListener("click", () => {
+  const v = $("examInput").value;
+  if (v) { store.exam = v; save(); renderHome(); }
+  $("examDlg").close();
+});
+$("examCloseBtn").addEventListener("click", () => $("examDlg").close());
 $("reportBtn").addEventListener("click", openReport);
 $("reportReloadBtn").addEventListener("click", openReport);
 $("reportCloseBtn").addEventListener("click", () => $("reportDlg").close());
