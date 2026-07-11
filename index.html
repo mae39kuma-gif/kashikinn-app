@@ -80,6 +80,9 @@ button.stat{text-align:left;font-family:inherit}
 .bar > span{display:block;height:100%;background:var(--accent);border-radius:2px}
 .mode-foot{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .mode--special .mode-name{color:var(--accent)}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}
+.qbtn{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);border-radius:.6rem;padding:.65rem .3rem;font-size:.85rem;font-weight:700}
+.qbtn:active{background:var(--accent-soft)}
 .tools{display:flex;gap:.6rem;margin-top:1.4rem;flex-wrap:wrap}
 .btn{border:1px solid var(--line);background:var(--card);border-radius:.5rem;padding:.55rem .9rem;font-size:.82rem}
 .btn--primary{background:var(--accent);border-color:var(--accent);color:var(--paper);font-weight:700}
@@ -561,6 +564,17 @@ function renderHome() {
 
   const spBox = $("special-modes");
   spBox.innerHTML = "";
+  const quick = document.createElement("div");
+  quick.className = "quick";
+  [10, 30].forEach(n => {
+    const b = document.createElement("button");
+    b.className = "qbtn";
+    b.textContent = "ランダム" + n + "問";
+    b.addEventListener("click", () => startSession({ type: "rand", n }));
+    quick.appendChild(b);
+  });
+  spBox.appendChild(quick);
+
   const all = document.createElement("button");
   all.className = "mode mode--special";
   all.innerHTML = '<span class="mode-head"><span class="mode-name">全問シャッフル</span><span class="mode-range">' + S().questions.length + '問をランダムに出題</span></span>';
@@ -585,6 +599,14 @@ function renderHome() {
 }
 
 /* ---- 一問一答セッション ---- */
+function shuffleIds(ids) {
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
 function startSession(mode) {
   let ids;
   if (mode.type === "cat") {
@@ -592,11 +614,12 @@ function startSession(mode) {
     let start = ids.findIndex(id => !(store.a[id] && store.a[id].my));
     if (start > 0) ids = ids.slice(start).concat(ids.slice(0, start));
   } else if (mode.type === "all") {
-    ids = S().questions.map(q => q.id);
-    for (let i = ids.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [ids[i], ids[j]] = [ids[j], ids[i]];
-    }
+    ids = shuffleIds(S().questions.map(q => q.id));
+  } else if (mode.type === "rand") {
+    // 未回答の問題を優先してランダムに n 問
+    const un = shuffleIds(S().questions.filter(q => !(store.a[q.id] && store.a[q.id].my)).map(q => q.id));
+    const done = shuffleIds(S().questions.filter(q => store.a[q.id] && store.a[q.id].my).map(q => q.id));
+    ids = un.concat(done).slice(0, mode.n);
   } else {
     ids = weakIds();
   }
@@ -609,6 +632,7 @@ function startSession(mode) {
 function modeLabel(mode) {
   if (mode.type === "cat") return S().cats[mode.pref].name;
   if (mode.type === "all") return "全問シャッフル";
+  if (mode.type === "rand") return "ランダム" + mode.n + "問";
   return "苦手だけ";
 }
 
