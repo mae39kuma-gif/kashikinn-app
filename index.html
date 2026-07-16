@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>資格一問一答</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#31618F">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
 :root{
   --paper:#F4F6F3; --card:#FDFDFB; --ink:#232E38; --muted:#64717F;
@@ -80,6 +85,8 @@ button.stat{text-align:left;font-family:inherit}
 .bar > span{display:block;height:100%;background:var(--accent);border-radius:2px}
 .mode-foot{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .mode--special .mode-name{color:var(--accent)}
+.duebtn{width:100%;border:none;background:var(--accent);color:var(--paper);border-radius:.7rem;padding:.85rem;font-size:.95rem;font-weight:700;margin-top:.2rem}
+.duedone{margin:.2rem 0 0;font-size:.78rem;color:var(--muted);text-align:center;background:var(--card);border:1px solid var(--line);border-radius:.6rem;padding:.55rem}
 .quick{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}
 .qbtn{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);border-radius:.6rem;padding:.65rem .3rem;font-size:.85rem;font-weight:700}
 .qbtn:active{background:var(--accent-soft)}
@@ -195,6 +202,7 @@ dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid va
     </header>
     <div class="stats" id="stats"></div>
     <div class="stats stats--sub" id="stats2"></div>
+    <div id="dueBox" hidden></div>
     <p class="section-label">学習のあゆみ（直近14日）</p>
     <div class="chart" id="chart"></div>
     <p class="section-label">分野を選んで開始</p>
@@ -446,6 +454,36 @@ function weakIds() {
   }).map(q => q.id);
 }
 
+/* ---- 今日の復習（間隔反復） ---- */
+const SRS_INTERVALS = [1, 3, 7, 14, 30, 60];  // レベル0〜5の次回復習間隔(日)
+
+function srsSchedule(prevLevel, ok) {
+  const l = ok ? Math.min((prevLevel || 0) + 1, 5) : 0;
+  const nd = new Date();
+  nd.setDate(nd.getDate() + SRS_INTERVALS[l]);
+  return { l, d: dateKey(nd) };
+}
+
+function dueIds() {
+  const today = dateKey(new Date());
+  return S().questions.filter(q => {
+    const r = store.a[q.id];
+    if (!r || !r.my) return false;
+    if (r.d) return r.d <= today;
+    return r.my !== q.a;  // 復習日未設定の旧記録は、間違えたままなら復習対象
+  }).map(q => q.id).sort((a, b) => ((store.a[a].d || "0") < (store.a[b].d || "0") ? -1 : 1));
+}
+
+function nextDueDate() {
+  const today = dateKey(new Date());
+  let next = null;
+  S().questions.forEach(q => {
+    const d = (store.a[q.id] || {}).d;
+    if (d && d > today && (!next || d < next)) next = d;
+  });
+  return next;
+}
+
 function renderChart() {
   const box = $("chart");
   const hist = store.hist || {};
@@ -535,6 +573,22 @@ function renderHome() {
     '<div class="stat"><span class="n">' + (answered ? rate + "%" : "—") + '</span><span class="l">正答率</span></div>' +
     '<div class="stat"><span class="n">' + weak + '</span><span class="l">要復習</span></div>';
 
+  const due = dueIds();
+  const dueBox = $("dueBox");
+  if (due.length) {
+    dueBox.innerHTML = '<button class="duebtn" id="dueBtn">🔁 今日の復習 ' + due.length + '問 — タップで開始</button>';
+    dueBox.hidden = false;
+    $("dueBtn").addEventListener("click", () => startSession({ type: "due" }));
+  } else {
+    const next = nextDueDate();
+    if (next) {
+      dueBox.innerHTML = '<p class="duedone">今日の復習は完了 🎉 次回は ' + next.slice(5).replace("-", "/") + ' です</p>';
+      dueBox.hidden = false;
+    } else {
+      dueBox.hidden = true;
+    }
+  }
+
   const dte = daysToExam();
   const dteText = dte > 1 ? "あと" + dte + "日" : dte === 1 ? "あと1日" : dte === 0 ? "本日!" : "終了";
   $("stats2").innerHTML =
@@ -620,6 +674,8 @@ function startSession(mode) {
     const un = shuffleIds(S().questions.filter(q => !(store.a[q.id] && store.a[q.id].my)).map(q => q.id));
     const done = shuffleIds(S().questions.filter(q => store.a[q.id] && store.a[q.id].my).map(q => q.id));
     ids = un.concat(done).slice(0, mode.n);
+  } else if (mode.type === "due") {
+    ids = dueIds();
   } else {
     ids = weakIds();
   }
@@ -633,6 +689,7 @@ function modeLabel(mode) {
   if (mode.type === "cat") return S().cats[mode.pref].name;
   if (mode.type === "all") return "全問シャッフル";
   if (mode.type === "rand") return "ランダム" + mode.n + "問";
+  if (mode.type === "due") return "今日の復習";
   return "苦手だけ";
 }
 
@@ -671,7 +728,8 @@ function answer(my) {
   const w = !!q.w;
   const ok = my === q.a;
   const prev = store.a[q.id] || {};
-  store.a[q.id] = { my, f: prev.f || 0 };
+  const srs = srsSchedule(prev.l, ok);
+  store.a[q.id] = { my, f: prev.f || 0, l: srs.l, d: srs.d };
   markAnswered(ok);
   save();
   session.results.push({ id: q.id, ok });
@@ -1015,6 +1073,10 @@ renderGhStatus();
 renderTabs();
 renderHome();
 showView("home");
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>
