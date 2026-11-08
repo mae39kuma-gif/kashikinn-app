@@ -210,20 +210,38 @@ dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid va
 .kyear-btn{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);border-radius:.5rem;padding:.4rem .75rem;font-size:.8rem;font-weight:700}
 .kyear-btn[disabled],.qbtn[disabled]{opacity:.4;cursor:default}
 .kmeta{margin:.8rem 0 .4rem;font-size:.74rem;letter-spacing:.08em;color:var(--muted)}
-.kpage{background:#FFFFFF;border:1px solid var(--line);border-radius:.5rem;overflow-x:auto;min-height:12rem;display:flex;align-items:flex-start;justify-content:center}
-.kpage canvas{display:block;max-width:none}
-.kpage .loading{color:#64717F;font-size:.8rem;padding:2rem 0;align-self:center}
+.kpage{background:#FFFFFF;border:1px solid var(--line);border-radius:.5rem;overflow-x:auto;min-height:12rem;text-align:center}
+.kpage canvas{display:block;max-width:none;margin:0 auto}
+.kpage .loading{display:block;color:#64717F;font-size:.8rem;padding:2rem 0}
 .kzoomrow{display:flex;justify-content:flex-end;margin-top:.35rem}
 .kzoom{border:none;background:none;color:var(--accent);font-size:.78rem;padding:.2rem 0}
 .ksheet{margin-top:.8rem;background:var(--ng-bg);border-radius:.6rem;padding:.7rem .8rem .8rem}
 .ksheet-label{display:flex;justify-content:space-between;font-size:.7rem;letter-spacing:.12em;color:var(--ng);margin-bottom:.45rem}
 .kmarks{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem}
 .kmark{display:flex;justify-content:center;border:none;background:none;padding:.2rem 0;color:var(--ng)}
-.kmark .oval{display:block;width:2.1rem;height:3rem;border:2px solid var(--ng);border-radius:50%;position:relative}
+.kmark .oval{display:block;width:2.8rem;height:2.8rem;border:2px solid var(--ng);border-radius:50%;position:relative}
 .kmark .oval::after{content:attr(data-n);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem}
 .kmark:active .oval,.kmark.on .oval{background:var(--ink);border-color:var(--ink)}
 .kmark.on .oval::after{color:transparent}
 .wrongs .kpage{margin-top:.6rem}
+
+/* ---- 結果の答え合わせ一覧（正解=薄い緑、不正解=薄い赤） ---- */
+.rv{display:flex;flex-direction:column;gap:.45rem}
+.rv details{border-radius:.55rem;padding:.55rem .8rem;font-size:.85rem;border:1px solid transparent}
+.rv .rv-ok{background:var(--ok-bg)}
+.rv .rv-ng{background:var(--ng-bg)}
+.rv .rv-skip{background:var(--card);border-color:var(--line)}
+.rv summary{display:flex;align-items:baseline;gap:.6rem;cursor:pointer}
+.rv .rv-q{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rv .rv-f{flex:1;min-width:0;color:var(--muted);font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv .rv-v{white-space:nowrap;font-weight:700}
+.rv .rv-ok .rv-v{color:var(--ok)}
+.rv .rv-ng .rv-v{color:var(--ng)}
+.rv .rv-skip .rv-v{color:var(--muted)}
+.rv .rv-body{margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--line)}
+.rv .rv-body p{margin:.35rem 0}
+.rv .rv-ans{font-weight:700}
+.rv .kpage{margin-top:.5rem}
 
 /* ---- 確認（claude.ai 上では confirm() が使えないため画面内で確認する） ---- */
 .askbox{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:1rem 1rem calc(1rem + env(safe-area-inset-bottom,0px))}
@@ -1083,18 +1101,43 @@ async function gradeExamNow() {
 }
 
 // 採点は答えた問題のみ(未回答は対象外)
+/* 結果画面の答え合わせ一覧。rows: {my, a, label, field, fill(body)}。my=0 は未回答 */
+const CIRC = ["", "①", "②", "③", "④", "⑤"];
+function renderReview(box, rows) {
+  box.innerHTML = "";
+  if (!rows.length) return;
+  const ok = rows.filter(r => r.my && r.my === r.a).length;
+  const ng = rows.filter(r => r.my && r.my !== r.a).length;
+  const h = document.createElement("p");
+  h.className = "section-label";
+  h.textContent = "答え合わせ（◯ " + ok + "問・✕ " + ng + "問" + (rows.length - ok - ng ? "・未回答 " + (rows.length - ok - ng) + "問" : "") + "）タップで詳しく";
+  box.appendChild(h);
+  const list = document.createElement("div");
+  list.className = "rv";
+  rows.forEach(r => {
+    const cls = !r.my ? "rv-skip" : r.my === r.a ? "rv-ok" : "rv-ng";
+    const v = !r.my ? "未回答 → 正解 " + CIRC[r.a]
+      : r.my === r.a ? "◯ 正解 " + CIRC[r.a]
+      : "✕ あなた " + CIRC[r.my] + " → 正解 " + CIRC[r.a];
+    const d = document.createElement("details");
+    d.className = cls;
+    d.innerHTML = "<summary><span class='rv-q'>" + r.label + "</span><span class='rv-f'>" + r.field + "</span><span class='rv-v'>" + v + "</span></summary><div class='rv-body'></div>";
+    d.addEventListener("toggle", () => { if (d.open && !d.dataset.done) { d.dataset.done = "1"; r.fill(d.querySelector(".rv-body")); } });
+    list.appendChild(d);
+  });
+  box.appendChild(list);
+}
+
 function finishExam() {
   clearInterval(exam.timer);
   const bc = {};
   Object.keys(S().cats).forEach(p => { bc[p] = [0, 0]; });
   let score = 0, answered = 0;
-  const wrongs = [];
   exam.qs.forEach((q, i) => {
     if (!exam.ans[i]) return;
     answered++;
     bc[q.cat][1]++;
     if (exam.ans[i] === q.a) { score++; bc[q.cat][0]++; }
-    else { wrongs.push({ q, my: exam.ans[i] }); }
   });
   const skipped = exam.qs.length - answered;
   const full = exam.qs.length === S().exam.length && !skipped;
@@ -1112,21 +1155,15 @@ function finishExam() {
   $("examByCat").innerHTML = Object.keys(S().cats).filter(p => bc[p][1] > 0).map(p =>
     "<tr><td>" + p + " " + S().cats[p].name + "</td><td>" + bc[p][0] + " / " + bc[p][1] + "</td></tr>").join("");
 
-  const box = $("examWrongList");
-  box.innerHTML = "";
-  if (wrongs.length) {
-    const h = document.createElement("p");
-    h.className = "section-label";
-    h.textContent = "間違えた問題（タップで解説）";
-    box.appendChild(h);
-    wrongs.forEach(w => {
-      const d = document.createElement("details");
-      d.innerHTML = "<summary><span class='wid'>問" + w.q.n + "</span>" + w.q.q.slice(0, 40) + (w.q.q.length > 40 ? "…" : "") + "</summary>" +
-        "<p style='margin:.6rem 0 0;font-weight:700'>正解: " + w.q.a + "（あなた: " + w.my + "）</p>" +
-        "<p style='margin:.4rem 0 0'>" + mdEsc(w.q.c[w.q.a - 1]) + "</p>" + w.q.e;
-      box.appendChild(d);
-    });
-  }
+  renderReview($("examWrongList"), exam.qs.map((q, i) => { const my = exam.ans[i]; return {
+    my, a: q.a, label: "問" + q.n, field: S().cats[q.cat].name,
+    fill: body => {
+      body.innerHTML = "<p>" + mdEsc(q.q) + "</p>" +
+        "<p class='rv-ans' style='color:var(--ok)'>正解 " + CIRC[q.a] + "：" + mdEsc(q.c[q.a - 1]) + "</p>" +
+        (my && my !== q.a ? "<p class='rv-ans' style='color:var(--ng)'>あなた " + CIRC[my] + "：" + mdEsc(q.c[my - 1]) + "</p>" : "") +
+        q.e;
+    },
+  }; }));
   exam = null;
   showView("examresult");
 }
@@ -1471,7 +1508,7 @@ const KK = (() => {
     clearInterval(session.timer);
     const s = session; session = null;
     const byF = FIELDS.map(() => [0, 0]), byY = {};
-    let score = 0, answered = 0; const wrongs = [];
+    let score = 0, answered = 0;
     s.items.forEach((it, i) => {
       const my = s.ans[i]; if (!my) return;
       answered++;
@@ -1479,7 +1516,7 @@ const KK = (() => {
       const fi = FIELDS.indexOf(fieldOf(it.n));
       byF[fi][1]++; if (ok) byF[fi][0]++;
       byY[it.r] = byY[it.r] || [0, 0]; byY[it.r][1]++; if (ok) byY[it.r][0]++;
-      if (ok) score++; else wrongs.push({ it, my });
+      if (ok) score++;
     });
     const skipped = s.items.length - answered;
     const full = s.mode.type === "full" && !skipped;
@@ -1494,19 +1531,16 @@ const KK = (() => {
     if (ys.length > 1) rows += ys.sort((a, b) => b - a).map(r => "<tr><td>" + yl(r) + "</td><td>" + byY[r][0] + " / " + byY[r][1] + "</td></tr>").join("");
     $("kkByCat").innerHTML = rows;
 
-    const box = $("kkWrongList"); box.innerHTML = "";
-    if (wrongs.length) {
-      const h = document.createElement("p");
-      h.className = "section-label";
-      h.textContent = "間違えた問題（タップで問題と正解を表示）";
-      box.appendChild(h);
-    }
-    wrongs.forEach(w => {
-      const d = document.createElement("details");
-      d.innerHTML = "<summary><span class='wid'>" + yl(w.it.r) + " 問" + w.it.n + "</span>正解 " + YEARS[w.it.r].key[w.it.n - 1] + "（あなた " + w.my + "）・" + fieldOf(w.it.n).name + "</summary><div class='kpage'></div>";
-      d.addEventListener("toggle", () => { if (d.open && !d.dataset.done) { d.dataset.done = "1"; renderPage(d.querySelector(".kpage"), w.it.r, w.it.n).catch(() => {}); } });
-      box.appendChild(d);
-    });
+    const multiYear = new Set(s.items.map(it => it.r)).size > 1;
+    renderReview($("kkWrongList"), s.items.map((it, i) => ({
+      my: s.ans[i], a: YEARS[it.r].key[it.n - 1],
+      label: (multiYear ? "R" + it.r + " " : "") + "問" + it.n,
+      field: fieldOf(it.n).name,
+      fill: body => {
+        body.innerHTML = "<div class='kpage'></div>";
+        renderPage(body.querySelector(".kpage"), it.r, it.n).catch(() => {});
+      },
+    })));
     showView("kr");
   }
 
