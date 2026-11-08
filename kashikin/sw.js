@@ -1,5 +1,5 @@
 const PREFIX = "kashikin-share-";
-const CACHE = PREFIX + "f9813fce48";
+const CACHE = PREFIX + "efd48c76a9";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./"])).then(() => self.skipWaiting()));
 });

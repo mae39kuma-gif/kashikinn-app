@@ -914,12 +914,12 @@ let exam = null;
 
 let lastExamN = 0;
 
-// n=0 は全問(本番形式)。n 問のミニ模試は全問からランダムに選び、問番号順に並べる
+// n=0 は全問(本番形式)。n 問のミニ模試は全問からランダムに選び、ランダムな順番で出す
 function startExam(n) {
   if (!S().exam) return;
   const all = S().exam;
   lastExamN = n > 0 && n < all.length ? n : 0;
-  const qs = lastExamN ? shuffleIds(all.slice()).slice(0, lastExamN).sort((a, b) => a.n - b.n) : all;
+  const qs = lastExamN ? shuffleIds(all.slice()).slice(0, lastExamN) : all;
   const minutes = Math.max(1, Math.round(S().examMeta.minutes * qs.length / all.length));
   exam = { subject: cur, qs, idx: 0, ans: new Array(qs.length).fill(0), end: Date.now() + minutes * 60 * 1000, timer: null };
   showView("exam");
