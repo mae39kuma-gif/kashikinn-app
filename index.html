@@ -216,6 +216,10 @@ dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid va
           <span class="mode-head"><span class="mode-name">模擬試験を受ける</span><span class="mode-range">50問・120分</span></span>
           <span class="mode-foot" id="mockFoot">本試験と同じ配分・形式。終了後に採点と分野別内訳を表示</span>
         </button>
+        <div class="quick">
+          <button class="qbtn" id="mini10Btn">ミニ模試 10問</button>
+          <button class="qbtn" id="mini20Btn">ミニ模試 20問</button>
+        </div>
       </div>
     </div>
     <div id="ghSection">
@@ -280,7 +284,8 @@ dialog input{width:100%;box-sizing:border-box;padding:.55rem;border:1px solid va
       <p class="qtext" id="examText"></p>
     </article>
     <div class="choices" id="examChoices"></div>
-    <p class="examnote">選択肢をタップすると解答が確定し、次の問題へ進みます。採点と解説は50問終了後にまとめて表示されます。</p>
+    <p class="examnote">選択肢をタップすると解答が確定し、次の問題へ進みます。採点と解説は最後にまとめて表示されます。</p>
+    <button class="btn" id="examGradeBtn" style="display:block;width:100%;margin-top:.8rem;padding:.7rem">ここまでで採点する（答えた問題のみ）</button>
   </section>
 
   <section id="view-examresult" hidden>
@@ -649,8 +654,8 @@ function renderHome() {
   const hist = store.mock || [];
   if (S().exam && hist.length) {
     const last = hist[hist.length - 1];
-    const best = Math.max.apply(null, hist.map(h => h.s));
-    $("mockFoot").textContent = "前回 " + last.s + "/" + last.t + " 点（" + last.d + "）・自己ベスト " + best + " 点・受験 " + hist.length + " 回";
+    const best = Math.max.apply(null, hist.filter(h => h.t).map(h => Math.round(h.s / h.t * 100)));
+    $("mockFoot").textContent = "前回 " + last.s + "/" + last.t + " 問正解（" + last.d + "）・最高正答率 " + best + "%・受験 " + hist.length + " 回";
   } else if (S().exam) {
     $("mockFoot").textContent = "本試験と同じ配分・形式。終了後に採点と分野別内訳を表示";
   }
@@ -907,9 +912,16 @@ function renderGhStatus() {
 /* ---- 模擬試験 ---- */
 let exam = null;
 
-function startExam() {
+let lastExamN = 0;
+
+// n=0 は全問(本番形式)。n 問のミニ模試は全問からランダムに選び、問番号順に並べる
+function startExam(n) {
   if (!S().exam) return;
-  exam = { subject: cur, idx: 0, ans: new Array(S().exam.length).fill(0), end: Date.now() + S().examMeta.minutes * 60 * 1000, timer: null };
+  const all = S().exam;
+  lastExamN = n > 0 && n < all.length ? n : 0;
+  const qs = lastExamN ? shuffleIds(all.slice()).slice(0, lastExamN).sort((a, b) => a.n - b.n) : all;
+  const minutes = Math.max(1, Math.round(S().examMeta.minutes * qs.length / all.length));
+  exam = { subject: cur, qs, idx: 0, ans: new Array(qs.length).fill(0), end: Date.now() + minutes * 60 * 1000, timer: null };
   showView("exam");
   renderExamQ();
   exam.timer = setInterval(examTick, 1000);
@@ -925,9 +937,9 @@ function examTick() {
 }
 
 function renderExamQ() {
-  const q = S().exam[exam.idx];
-  $("examCount").textContent = (exam.idx + 1) + " / " + S().exam.length;
-  $("examTrack").style.width = (exam.idx / S().exam.length * 100) + "%";
+  const q = exam.qs[exam.idx];
+  $("examCount").textContent = (exam.idx + 1) + " / " + exam.qs.length;
+  $("examTrack").style.width = (exam.idx / exam.qs.length * 100) + "%";
   $("examMeta").textContent = "問" + q.n + "・" + S().cats[q.cat].name;
   $("examText").textContent = q.q;
   const box = $("examChoices");
@@ -941,7 +953,7 @@ function renderExamQ() {
       markAnswered(i + 1 === q.a);
       save();
       exam.idx++;
-      if (exam.idx < S().exam.length) { renderExamQ(); } else { finishExam(); }
+      if (exam.idx < exam.qs.length) { renderExamQ(); } else { finishExam(); }
     });
     box.appendChild(b);
   });
@@ -955,23 +967,39 @@ function quitExam() {
   showView("home");
 }
 
+function gradeExamNow() {
+  const left = exam.ans.filter(a => !a).length;
+  if (left && !confirm("未回答の " + left + " 問は採点に含めず、答えた問題だけで採点します。よろしいですか？")) return;
+  finishExam();
+}
+
+// 採点は答えた問題のみ(未回答は対象外)
 function finishExam() {
   clearInterval(exam.timer);
   const bc = {};
   Object.keys(S().cats).forEach(p => { bc[p] = [0, 0]; });
-  let score = 0;
+  let score = 0, answered = 0;
   const wrongs = [];
-  S().exam.forEach((q, i) => {
+  exam.qs.forEach((q, i) => {
+    if (!exam.ans[i]) return;
+    answered++;
     bc[q.cat][1]++;
     if (exam.ans[i] === q.a) { score++; bc[q.cat][0]++; }
     else { wrongs.push({ q, my: exam.ans[i] }); }
   });
-  store.mock = store.mock || [];
-  store.mock.push({ d: dateKey(new Date()), s: score, t: S().exam.length });
-  save();
+  const skipped = exam.qs.length - answered;
+  const full = exam.qs.length === S().exam.length && !skipped;
+  if (answered) {
+    store.mock = store.mock || [];
+    store.mock.push({ d: dateKey(new Date()), s: score, t: answered });
+    save();
+  }
 
-  $("examScoreBig").innerHTML = score + '<small> / ' + S().exam.length + '点</small>';
-  $("examScoreRate").textContent = "正答率 " + Math.round(score / S().exam.length * 100) + "%（" + S().examMeta.note + "）";
+  $("examScoreBig").innerHTML = score + '<small> / ' + answered + (full ? '点' : '問') + '</small>';
+  $("examScoreRate").textContent = answered
+    ? "正答率 " + Math.round(score / answered * 100) + "%" +
+      (full ? "（" + S().examMeta.note + "）" : "（" + exam.qs.length + "問中 " + answered + "問を採点" + (skipped ? "・未回答 " + skipped + "問は対象外" : "") + "）")
+    : "まだ1問も答えていないため採点できません";
   $("examByCat").innerHTML = Object.keys(S().cats).filter(p => bc[p][1] > 0).map(p =>
     "<tr><td>" + p + " " + S().cats[p].name + "</td><td>" + bc[p][0] + " / " + bc[p][1] + "</td></tr>").join("");
 
@@ -980,12 +1008,12 @@ function finishExam() {
   if (wrongs.length) {
     const h = document.createElement("p");
     h.className = "section-label";
-    h.textContent = "間違えた・未回答の問題（タップで解説）";
+    h.textContent = "間違えた問題（タップで解説）";
     box.appendChild(h);
     wrongs.forEach(w => {
       const d = document.createElement("details");
       d.innerHTML = "<summary><span class='wid'>問" + w.q.n + "</span>" + w.q.q.slice(0, 40) + (w.q.q.length > 40 ? "…" : "") + "</summary>" +
-        "<p style='margin:.6rem 0 0;font-weight:700'>正解: " + w.q.a + "（あなた: " + (w.my ? w.my : "未回答") + "）</p>" +
+        "<p style='margin:.6rem 0 0;font-weight:700'>正解: " + w.q.a + "（あなた: " + w.my + "）</p>" +
         "<p style='margin:.4rem 0 0'>" + mdEsc(w.q.c[w.q.a - 1]) + "</p>" + w.q.e;
       box.appendChild(d);
     });
@@ -1007,9 +1035,12 @@ $("homeBtn").addEventListener("click", () => { renderHome(); showView("home"); }
 $("homeBtn2").addEventListener("click", () => { renderHome(); showView("home"); });
 $("retryBtn").addEventListener("click", () => startSession(session.mode));
 
-$("examStartBtn").addEventListener("click", startExam);
+$("examStartBtn").addEventListener("click", () => startExam(0));
+$("mini10Btn").addEventListener("click", () => startExam(10));
+$("mini20Btn").addEventListener("click", () => startExam(20));
 $("examQuitBtn").addEventListener("click", quitExam);
-$("examRetryBtn").addEventListener("click", startExam);
+$("examGradeBtn").addEventListener("click", gradeExamNow);
+$("examRetryBtn").addEventListener("click", () => startExam(lastExamN));
 $("examHomeBtn").addEventListener("click", () => { renderHome(); showView("home"); });
 $("examHomeBtn2").addEventListener("click", () => { renderHome(); showView("home"); });
 

@@ -1,5 +1,5 @@
 const PREFIX = "quiz-";
-const CACHE = PREFIX + "cc3b5aa95f";
+const CACHE = PREFIX + "eb1be49666";
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./"])).then(() => self.skipWaiting()));
 });
